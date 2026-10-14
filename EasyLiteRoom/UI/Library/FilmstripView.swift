@@ -15,13 +15,15 @@ public struct FilmstripItem: Identifiable, Sendable, Equatable {
     public let image: NSImage?
     public let isRAW: Bool
     public var rating: Int
+    public let url: URL?
 
-    public init(id: UUID = UUID(), title: String, image: NSImage?, isRAW: Bool = true, rating: Int = 0) {
+    public init(id: UUID = UUID(), title: String, image: NSImage?, isRAW: Bool = true, rating: Int = 0, url: URL? = nil) {
         self.id = id
         self.title = title
         self.image = image
         self.isRAW = isRAW
         self.rating = rating
+        self.url = url
     }
 }
 

@@ -17,6 +17,8 @@ public struct DevelopCanvasView: View {
     @State private var splitPosition: CGFloat = 0.5
     @State private var zoomScale: CGFloat = 1.0
     @State private var panOffset: CGSize = .zero
+    @GestureState private var gestureZoom: CGFloat = 1.0
+    @GestureState private var gesturePan: CGSize = .zero
 
     public init(
         image: NSImage?,
@@ -28,6 +30,10 @@ public struct DevelopCanvasView: View {
         self.originalImage = originalImage
         self.metadata = metadata
         self._showSplitComparison = showSplitComparison
+    }
+
+    private var effectiveZoom: CGFloat {
+        max(0.2, min(8.0, zoomScale * gestureZoom))
     }
 
     public var body: some View {
@@ -87,20 +93,37 @@ public struct DevelopCanvasView: View {
                                 .aspectRatio(contentMode: .fit)
                         }
                     }
-                    .scaleEffect(zoomScale)
-                    .offset(panOffset)
+                    .scaleEffect(effectiveZoom)
+                    .offset(x: panOffset.width + gesturePan.width, y: panOffset.height + gesturePan.height)
                     .gesture(
                         MagnificationGesture()
-                            .onChanged { scale in
-                                zoomScale = max(0.2, min(8.0, scale))
+                            .updating($gestureZoom) { value, state, _ in
+                                state = value
+                            }
+                            .onEnded { value in
+                                zoomScale = max(0.2, min(8.0, zoomScale * value))
                             }
                     )
                     .simultaneousGesture(
                         DragGesture()
-                            .onChanged { drag in
-                                panOffset = drag.translation
+                            .updating($gesturePan) { value, state, _ in
+                                state = value.translation
+                            }
+                            .onEnded { value in
+                                panOffset.width += value.translation.width
+                                panOffset.height += value.translation.height
                             }
                     )
+                    .onTapGesture(count: 2) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            if zoomScale > 1.2 {
+                                zoomScale = 1.0
+                                panOffset = .zero
+                            } else {
+                                zoomScale = 2.0
+                            }
+                        }
+                    }
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "photo.badge.plus")
@@ -138,25 +161,35 @@ public struct DevelopCanvasView: View {
 
                         // Zoom readout & Reset
                         HStack(spacing: 6) {
-                            Button("Fit") {
-                                withAnimation(.spring(response: 0.25)) {
+                            Button {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                                     zoomScale = 1.0
                                     panOffset = .zero
                                 }
+                            } label: {
+                                Text("Fit")
+                                    .fontWeight(abs(zoomScale - 1.0) < 0.05 ? .semibold : .regular)
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
+                            .tint(abs(zoomScale - 1.0) < 0.05 ? .accentColor : .primary)
+                            .help("Fit entire photo to viewport")
 
-                            Button("100%") {
-                                withAnimation(.spring(response: 0.25)) {
-                                    zoomScale = 1.0
+                            Button {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                    zoomScale = 2.0
                                     panOffset = .zero
                                 }
+                            } label: {
+                                Text("100%")
+                                    .fontWeight(abs(zoomScale - 2.0) < 0.05 ? .semibold : .regular)
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
+                            .tint(abs(zoomScale - 2.0) < 0.05 ? .accentColor : .primary)
+                            .help("Zoom to 100% 1:1 pixel view")
 
-                            Text(String(format: "%.0f%%", zoomScale * 100))
+                            Text(String(format: "%.0f%%", effectiveZoom * 100))
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                                 .frame(width: 45)
                                 .foregroundStyle(.secondary)

@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var showExportSheet: Bool = false
     @State private var currentPhotoURL: URL? = nil
     @State private var isProcessing: Bool = false
+    @State private var workspaceMode: Int = 0 // 0 = Develop, 1 = Library, 2 = Export
 
     var body: some View {
         NavigationSplitView {
@@ -65,48 +66,70 @@ struct ContentView: View {
             }
             .frame(minWidth: 200, idealWidth: 220)
         } detail: {
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    // Central Develop Canvas
-                    DevelopCanvasView(
-                        image: renderedImage,
-                        originalImage: originalImage,
-                        metadata: metadata,
-                        showSplitComparison: $showSplitComparison
-                    )
+            if workspaceMode == 1 {
+                // Workspace: Full Catalog Library Grid
+                LibraryGridView(
+                    items: filmstripItems,
+                    selectedId: $selectedFilmstripId,
+                    onOpenPhoto: { item in
+                        selectedFilmstripId = item.id
+                        if let url = item.url {
+                            loadPhoto(from: url)
+                        }
+                        workspaceMode = 0
+                    },
+                    onImport: {
+                        openImageFile()
+                    }
+                )
+            } else {
+                // Workspace: Develop Room
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        // Central Develop Canvas
+                        DevelopCanvasView(
+                            image: renderedImage,
+                            originalImage: originalImage,
+                            metadata: metadata,
+                            showSplitComparison: $showSplitComparison
+                        )
 
-                    Divider()
+                        Divider()
 
-                    // Trailing Develop Inspector
-                    DevelopInspectorView(
-                        parameters: $parameters,
-                        histogramData: histogramData,
-                        onReset: {
-                            parameters = .default
-                            updatePipeline()
+                        // Trailing Develop Inspector
+                        DevelopInspectorView(
+                            parameters: $parameters,
+                            histogramData: histogramData,
+                            onReset: {
+                                parameters = .default
+                                updatePipeline()
+                            }
+                        )
+                    }
+
+                    // Horizontal Bottom Filmstrip
+                    FilmstripView(
+                        items: filmstripItems,
+                        selectedId: $selectedFilmstripId,
+                        onSelect: { item in
+                            selectedFilmstripId = item.id
+                            if let url = item.url {
+                                loadPhoto(from: url)
+                            }
                         }
                     )
                 }
-
-                // Horizontal Bottom Filmstrip
-                FilmstripView(
-                    items: filmstripItems,
-                    selectedId: $selectedFilmstripId,
-                    onSelect: { item in
-                        // Future multi-asset session switching
-                    }
-                )
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .principal) {
-                Picker("Workspace", selection: .constant(0)) {
-                    Text("Library").tag(1)
-                    Text("Develop").tag(0)
-                    Text("Export").tag(2)
+            ToolbarItem(placement: .principal) {
+                Picker("Workspace", selection: $workspaceMode) {
+                    Label("Library", systemImage: "square.grid.2x2").tag(1)
+                    Label("Develop", systemImage: "slider.horizontal.3").tag(0)
+                    Label("Export", systemImage: "square.and.arrow.up").tag(2)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 220)
+                .frame(width: 260)
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
@@ -156,6 +179,15 @@ struct ContentView: View {
                 } label: {
                     Label("Presets", systemImage: "wand.and.stars")
                 }
+                .help("Color grading presets")
+
+                Button {
+                    showSplitComparison.toggle()
+                } label: {
+                    Label("Split View", systemImage: showSplitComparison ? "square.split.2x1.fill" : "square.split.2x1")
+                }
+                .tint(showSplitComparison ? .accentColor : .primary)
+                .help("Toggle Before/After comparison view")
 
                 Button {
                     showExportSheet = true
@@ -164,12 +196,12 @@ struct ContentView: View {
                 }
                 .keyboardShortcut("e", modifiers: .command)
                 .help("Export photo (⌘E)")
-
-                Button {
-                    showSplitComparison.toggle()
-                } label: {
-                    Label("Split View", systemImage: "square.split.2x1")
-                }
+            }
+        }
+        .onChange(of: workspaceMode) { _, newMode in
+            if newMode == 2 {
+                showExportSheet = true
+                workspaceMode = 0
             }
         }
         .sheet(isPresented: $showExportSheet) {
@@ -268,7 +300,7 @@ struct ContentView: View {
 
             if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
                 self.originalImage = orig
-                let newItem = FilmstripItem(title: url.lastPathComponent, image: orig, isRAW: true, rating: 0)
+                let newItem = FilmstripItem(title: url.lastPathComponent, image: orig, isRAW: true, rating: 0, url: url)
                 self.filmstripItems.append(newItem)
                 self.selectedFilmstripId = newItem.id
             }
