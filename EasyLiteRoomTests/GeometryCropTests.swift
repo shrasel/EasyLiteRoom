@@ -132,4 +132,133 @@ struct GeometryCropTests {
         #expect(abs(parsed.geometry.rotationAngle - (-2.5)) < 1e-3)
         #expect(parsed.geometry.isCropped)
     }
+
+    @Test func testViewportBaseFitLandscapeAndPortrait() {
+        let viewportW: CGFloat = 1000
+        let viewportH: CGFloat = 600
+        let margin: CGFloat = 16
+
+        // 1. Landscape 4000x3000 photo
+        let fitLandscape = CanvasViewportCalculator.computeBaseFit(
+            imageWidth: 4000,
+            imageHeight: 3000,
+            viewportWidth: viewportW,
+            viewportHeight: viewportH,
+            orientationRotation: 0,
+            margin: margin
+        )
+        #expect(fitLandscape.width <= viewportW - margin * 2)
+        #expect(fitLandscape.height <= viewportH - margin * 2)
+        #expect(abs((fitLandscape.width / fitLandscape.height) - (4000.0 / 3000.0)) < 1e-3)
+
+        // 2. Portrait 3000x4000 photo
+        let fitPortrait = CanvasViewportCalculator.computeBaseFit(
+            imageWidth: 3000,
+            imageHeight: 4000,
+            viewportWidth: viewportW,
+            viewportHeight: viewportH,
+            orientationRotation: 0,
+            margin: margin
+        )
+        #expect(fitPortrait.width <= viewportW - margin * 2)
+        #expect(fitPortrait.height <= viewportH - margin * 2)
+        #expect(abs((fitPortrait.width / fitPortrait.height) - (3000.0 / 4000.0)) < 1e-3)
+    }
+
+    @Test func testViewportBaseFitWith90DegreeRotation() {
+        let viewportW: CGFloat = 1000
+        let viewportH: CGFloat = 600
+        let margin: CGFloat = 16
+
+        // Landscape photo rotated 90° becomes portrait visually
+        let fitRotated90 = CanvasViewportCalculator.computeBaseFit(
+            imageWidth: 4000,
+            imageHeight: 3000,
+            viewportWidth: viewportW,
+            viewportHeight: viewportH,
+            orientationRotation: 90,
+            margin: margin
+        )
+        // Visual dimensions should be portrait (width < height) and within bounds
+        #expect(fitRotated90.width <= viewportW - margin * 2)
+        #expect(fitRotated90.height <= viewportH - margin * 2)
+        #expect(abs((fitRotated90.width / fitRotated90.height) - (3000.0 / 4000.0)) < 1e-3)
+    }
+
+    @Test func testViewportPanBoundariesAtFit() {
+        let fitW: CGFloat = 800
+        let fitH: CGFloat = 500
+        let viewportW: CGFloat = 900
+        let viewportH: CGFloat = 600
+
+        // At zoom = 1.0 (FIT), pan must be locked to .zero
+        let maxPan = CanvasViewportCalculator.computeMaxPan(
+            fitWidth: fitW,
+            fitHeight: fitH,
+            zoomScale: 1.0,
+            viewportWidth: viewportW,
+            viewportHeight: viewportH
+        )
+        #expect(maxPan.width == 0.0)
+        #expect(maxPan.height == 0.0)
+
+        let clamped = CanvasViewportCalculator.clampPan(
+            rawPanX: 150.0,
+            rawPanY: -200.0,
+            maxPanX: maxPan.width,
+            maxPanY: maxPan.height
+        )
+        #expect(clamped.width == 0.0)
+        #expect(clamped.height == 0.0)
+    }
+
+    @Test func testViewportPanBoundariesWhenZoomed() {
+        let fitW: CGFloat = 800
+        let fitH: CGFloat = 600
+        let viewportW: CGFloat = 1000
+        let viewportH: CGFloat = 700
+
+        // At zoom = 2.0 (100% Loupe)
+        // Scaled size = 1600 x 1200
+        // maxPanX = (1600 - 1000) / 2 = 300
+        // maxPanY = (1200 - 700) / 2 = 250
+        let maxPan = CanvasViewportCalculator.computeMaxPan(
+            fitWidth: fitW,
+            fitHeight: fitH,
+            zoomScale: 2.0,
+            viewportWidth: viewportW,
+            viewportHeight: viewportH
+        )
+        #expect(abs(maxPan.width - 300.0) < 1e-3)
+        #expect(abs(maxPan.height - 250.0) < 1e-3)
+
+        // Test clamping within bounds
+        let inside = CanvasViewportCalculator.clampPan(
+            rawPanX: 100.0,
+            rawPanY: -50.0,
+            maxPanX: maxPan.width,
+            maxPanY: maxPan.height
+        )
+        #expect(inside.width == 100.0)
+        #expect(inside.height == -50.0)
+
+        // Test clamping beyond bounds (edges cannot pull inside viewport)
+        let excessive = CanvasViewportCalculator.clampPan(
+            rawPanX: 999.0,
+            rawPanY: -888.0,
+            maxPanX: maxPan.width,
+            maxPanY: maxPan.height
+        )
+        #expect(excessive.width == 300.0)
+        #expect(excessive.height == -250.0)
+
+        let excessiveOpposite = CanvasViewportCalculator.clampPan(
+            rawPanX: -500.0,
+            rawPanY: 500.0,
+            maxPanX: maxPan.width,
+            maxPanY: maxPan.height
+        )
+        #expect(excessiveOpposite.width == -300.0)
+        #expect(excessiveOpposite.height == 250.0)
+    }
 }

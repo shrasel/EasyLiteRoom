@@ -11,15 +11,18 @@ import AppKit
 
 public struct NavigatorView: View {
     let image: NSImage?
+    var orientationRotation: Int = 0
     @Binding var zoomScale: CGFloat
     @Binding var panOffset: CGSize
 
     public init(
         image: NSImage?,
+        orientationRotation: Int = 0,
         zoomScale: Binding<CGFloat>,
         panOffset: Binding<CGSize>
     ) {
         self.image = image
+        self.orientationRotation = orientationRotation
         self._zoomScale = zoomScale
         self._panOffset = panOffset
     }
@@ -50,12 +53,14 @@ public struct NavigatorView: View {
                     zoomButton("100%", active: abs(zoomScale - 2.0) < 0.05) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                             zoomScale = 2.0
+                            panOffset = .zero
                         }
                     }
 
                     zoomButton("200%", active: abs(zoomScale - 3.0) < 0.05) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                             zoomScale = 3.0
+                            panOffset = .zero
                         }
                     }
                 }
@@ -75,52 +80,55 @@ public struct NavigatorView: View {
                         let containerW = geo.size.width
                         let containerH = geo.size.height
 
-                        let imgW = currentImage.size.width
-                        let imgH = max(1.0, currentImage.size.height)
-                        let imgAspect = imgW / imgH
+                        let isRotated90 = (orientationRotation == 90 || orientationRotation == 270)
+                        let rawW = max(1.0, currentImage.size.width)
+                        let rawH = max(1.0, currentImage.size.height)
+
+                        let visualW = isRotated90 ? rawH : rawW
+                        let visualH = isRotated90 ? rawW : rawH
+                        let visualAspect = visualW / visualH
                         let containerAspect = containerW / max(1.0, containerH)
 
-                        let drawW: CGFloat = imgAspect > containerAspect ? containerW : containerH * imgAspect
-                        let drawH: CGFloat = imgAspect > containerAspect ? containerW / imgAspect : containerH
-                        let originX = (containerW - drawW) / 2.0
-                        let originY = (containerH - drawH) / 2.0
+                        let fitVisualW: CGFloat = visualAspect > containerAspect ? containerW : containerH * visualAspect
+                        let fitVisualH: CGFloat = visualAspect > containerAspect ? containerW / visualAspect : containerH
+                        let originX = (containerW - fitVisualW) / 2.0
+                        let originY = (containerH - fitVisualH) / 2.0
 
                         ZStack(alignment: .topLeading) {
                             Image(nsImage: currentImage)
                                 .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: drawW, height: drawH)
+                                .frame(
+                                    width: isRotated90 ? fitVisualH : fitVisualW,
+                                    height: isRotated90 ? fitVisualW : fitVisualH
+                                )
+                                .rotationEffect(.degrees(Double(orientationRotation)))
                                 .position(x: containerW / 2.0, y: containerH / 2.0)
 
                             // Interactive Viewport Rectangle when zoomed
                             if zoomScale > 1.05 {
-                                let rectW = max(18.0, drawW / zoomScale)
-                                let rectH = max(18.0, drawH / zoomScale)
+                                let rectW = min(fitVisualW, max(16.0, fitVisualW / zoomScale))
+                                let rectH = min(fitVisualH, max(16.0, fitVisualH / zoomScale))
 
-                                let maxPanX = max(1.0, (imgW * (zoomScale - 1.0)) / 2.0)
-                                let maxPanY = max(1.0, (imgH * (zoomScale - 1.0)) / 2.0)
+                                let travelX = (fitVisualW - rectW) / 2.0
+                                let travelY = (fitVisualH - rectH) / 2.0
 
-                                let normX = max(-1.0, min(1.0, CGFloat(-panOffset.width / maxPanX)))
-                                let normY = max(-1.0, min(1.0, CGFloat(-panOffset.height / maxPanY)))
-
-                                let centerX = originX + (drawW / 2.0) + (normX * (drawW - rectW) / 2.0)
-                                let centerY = originY + (drawH / 2.0) + (normY * (drawH - rectH) / 2.0)
+                                let centerX = originX + (fitVisualW / 2.0) - (panOffset.width * travelX)
+                                let centerY = originY + (fitVisualH / 2.0) - (panOffset.height * travelY)
 
                                 Rectangle()
                                     .strokeBorder(Color.white, lineWidth: 1.5)
-                                    .background(Rectangle().fill(Color.white.opacity(0.15)))
+                                    .background(Rectangle().fill(Color.white.opacity(0.18)))
                                     .frame(width: rectW, height: rectH)
                                     .position(x: centerX, y: centerY)
                                     .gesture(
                                         DragGesture()
                                             .onChanged { g in
-                                                let dragNormX = (g.location.x - originX - drawW / 2.0) / max(1.0, (drawW - rectW) / 2.0)
-                                                let dragNormY = (g.location.y - originY - drawH / 2.0) / max(1.0, (drawH - rectH) / 2.0)
-                                                let clampedX = max(-1.0, min(1.0, dragNormX))
-                                                let clampedY = max(-1.0, min(1.0, dragNormY))
+                                                guard travelX > 0 || travelY > 0 else { return }
+                                                let dragNormX = travelX > 0 ? (g.location.x - originX - fitVisualW / 2.0) / travelX : 0.0
+                                                let dragNormY = travelY > 0 ? (g.location.y - originY - fitVisualH / 2.0) / travelY : 0.0
                                                 panOffset = CGSize(
-                                                    width: -clampedX * maxPanX,
-                                                    height: -clampedY * maxPanY
+                                                    width: -max(-1.0, min(1.0, dragNormX)),
+                                                    height: -max(-1.0, min(1.0, dragNormY))
                                                 )
                                             }
                                     )
@@ -133,16 +141,16 @@ public struct NavigatorView: View {
                                     zoomScale = 2.0
                                 }
                             }
-                            let maxPanX = max(1.0, (imgW * (zoomScale - 1.0)) / 2.0)
-                            let maxPanY = max(1.0, (imgH * (zoomScale - 1.0)) / 2.0)
-                            let tapNormX = (location.x - originX - drawW / 2.0) / max(1.0, drawW / 2.0)
-                            let tapNormY = (location.y - originY - drawH / 2.0) / max(1.0, drawH / 2.0)
-                            let clampedX = max(-1.0, min(1.0, tapNormX))
-                            let clampedY = max(-1.0, min(1.0, tapNormY))
+                            let rectW = min(fitVisualW, max(16.0, fitVisualW / 2.0))
+                            let rectH = min(fitVisualH, max(16.0, fitVisualH / 2.0))
+                            let travelX = (fitVisualW - rectW) / 2.0
+                            let travelY = (fitVisualH - rectH) / 2.0
+                            let tapNormX = travelX > 0 ? (location.x - originX - fitVisualW / 2.0) / travelX : 0.0
+                            let tapNormY = travelY > 0 ? (location.y - originY - fitVisualH / 2.0) / travelY : 0.0
                             withAnimation(.spring(response: 0.2, dampingFraction: 0.85)) {
                                 panOffset = CGSize(
-                                    width: -clampedX * maxPanX,
-                                    height: -clampedY * maxPanY
+                                    width: -max(-1.0, min(1.0, tapNormX)),
+                                    height: -max(-1.0, min(1.0, tapNormY))
                                 )
                             }
                         }

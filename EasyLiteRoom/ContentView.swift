@@ -92,6 +92,7 @@ struct ContentView: View {
                         // Navigator mini-map with zoom modes (FIT | 100% | 200%)
                         NavigatorView(
                             image: renderedImage ?? originalImage,
+                            orientationRotation: parameters.geometry.orientationRotation,
                             zoomScale: $zoomScale,
                             panOffset: $panOffset
                         )
