@@ -39,6 +39,9 @@ xcodebuild -scheme EasyLiteRoom \
            -archivePath "${ARCHIVE_PATH}" \
            archive \
            CODE_SIGN_IDENTITY="-" \
+           CODE_SIGNING_REQUIRED=NO \
+           CODE_SIGN_STYLE=Manual \
+           DEVELOPMENT_TEAM="" \
            MARKETING_VERSION="${CLEAN_VERSION}"
 
 APP_PATH="${ARCHIVE_PATH}/Products/Applications/EasyLiteRoom.app"

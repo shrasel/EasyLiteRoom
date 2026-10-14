@@ -32,7 +32,10 @@ jobs:
           xcodebuild -scheme EasyLiteRoom \
                      -destination 'platform=macOS' \
                      clean build \
-                     CODE_SIGN_IDENTITY="-"
+                     CODE_SIGN_IDENTITY="-" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_STYLE=Manual \
+                     DEVELOPMENT_TEAM=""
 
       - name: Run Unit Tests
         run: |
@@ -40,4 +43,7 @@ jobs:
                      -destination 'platform=macOS' \
                      -only-testing:EasyLiteRoomTests \
                      test \
-                     CODE_SIGN_IDENTITY="-"
+                     CODE_SIGN_IDENTITY="-" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_STYLE=Manual \
+                     DEVELOPMENT_TEAM=""
