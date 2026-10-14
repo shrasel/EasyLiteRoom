@@ -1,0 +1,49 @@
+# Automatic GitHub Release Notes Configuration for EasyLiteRoom
+# Maps Conventional Commits and Pull Request labels to release categories.
+
+changelog:
+  categories:
+    - title: "🚀 New Features & Photographic Tools"
+      labels:
+        - "feature"
+        - "enhancement"
+      prefixes:
+        - "feat:"
+        - "feat("
+    - title: "🐛 Bug Fixes & Stability"
+      labels:
+        - "bug"
+        - "fix"
+      prefixes:
+        - "fix:"
+        - "fix("
+    - title: "⚡ GPU & Performance Optimizations"
+      labels:
+        - "performance"
+        - "optimization"
+      prefixes:
+        - "perf:"
+        - "perf("
+    - title: "🛠 Architecture, Metal & Engine"
+      labels:
+        - "architecture"
+        - "refactor"
+      prefixes:
+        - "refactor:"
+        - "refactor("
+    - title: "📦 Build, CI & Infrastructure"
+      labels:
+        - "ci"
+        - "maintenance"
+        - "build"
+      prefixes:
+        - "chore:"
+        - "chore("
+        - "build:"
+        - "ci:"
+    - title: "📝 Documentation"
+      labels:
+        - "documentation"
+      prefixes:
+        - "docs:"
+        - "docs("

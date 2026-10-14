@@ -15,7 +15,9 @@ xcuserdata/
 
 # Xcode DerivedData & Build Outputs
 build/
+dist/
 DerivedData/
+*.dmg
 *.hmap
 *.xccheckout
 *.moved-aside

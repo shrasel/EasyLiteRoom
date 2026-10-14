@@ -1,0 +1,82 @@
+name: EasyLiteRoom Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g. v0.1.0-alpha.1)'
+        required: true
+        default: 'v0.1.0-alpha.1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release (macOS)
+    runs-on: macos-15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version Tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          
+          # Determine if this is a pre-release (alpha, beta, rc)
+          if [[ "${TAG}" == *"-alpha"* ]] || [[ "${TAG}" == *"-beta"* ]] || [[ "${TAG}" == *"-rc"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Verify Environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Run Quality Gate Test Suite
+        run: |
+          xcodebuild -scheme EasyLiteRoom \
+                     -destination 'platform=macOS' \
+                     test \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO
+
+      - name: Package Distribution Artifacts (.dmg, .zip, checksums)
+        run: |
+          ./scripts/package_release.sh "${{ steps.version.outputs.tag }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "EasyLiteRoom ${{ steps.version.outputs.tag }}"
+          tag_name: "${{ steps.version.outputs.tag }}"
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          files: |
+            dist/*.dmg
+            dist/*.zip
+            dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
