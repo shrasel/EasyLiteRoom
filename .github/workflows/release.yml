@@ -58,12 +58,11 @@ jobs:
         run: |
           xcodebuild -scheme EasyLiteRoom \
                      -destination 'platform=macOS' \
+                     -only-testing:EasyLiteRoomTests \
                      test \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO
+                     CODE_SIGN_IDENTITY="-"
 
-      - name: Package Distribution Artifacts (.dmg, .zip, checksums)
+      - name: Package Distribution Artifacts (.dmg, .pkg, .zip, checksums)
         run: |
           ./scripts/package_release.sh "${{ steps.version.outputs.tag }}"
 
@@ -76,6 +75,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*.dmg
+            dist/*.pkg
             dist/*.zip
             dist/checksums.txt
         env:

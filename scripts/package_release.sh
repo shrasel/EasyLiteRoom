@@ -5,6 +5,7 @@
 #
 # Builds, packages, and signs (if certificates available) the release distribution artifacts:
 # - EasyLiteRoom-${VERSION}-macOS-arm64.dmg (drag-and-drop installer)
+# - EasyLiteRoom-${VERSION}-macOS-arm64.pkg (standard macOS application installer package)
 # - EasyLiteRoom-${VERSION}-macOS-arm64.zip (portable .app)
 # - checksums.txt (SHA-256 cryptographic verification)
 #
@@ -37,16 +38,12 @@ xcodebuild -scheme EasyLiteRoom \
            -destination 'platform=macOS' \
            -archivePath "${ARCHIVE_PATH}" \
            archive \
-           CODE_SIGNING_ALLOWED=NO \
-           CODE_SIGN_IDENTITY="" \
-           CODE_SIGNING_REQUIRED=NO \
-           MARKETING_VERSION="${CLEAN_VERSION}" \
-           | xcbeautify 2>/dev/null || true
+           CODE_SIGN_IDENTITY="-" \
+           MARKETING_VERSION="${CLEAN_VERSION}"
 
 APP_PATH="${ARCHIVE_PATH}/Products/Applications/EasyLiteRoom.app"
 
 if [ ! -d "${APP_PATH}" ]; then
-    # Fallback to direct DerivedData location if archive products path differs
     FALLBACK_APP="$(find "${BUILD_DIR}" -name "EasyLiteRoom.app" -type d | head -n 1)"
     if [ -n "${FALLBACK_APP}" ] && [ -d "${FALLBACK_APP}" ]; then
         APP_PATH="${FALLBACK_APP}"
@@ -59,7 +56,7 @@ fi
 echo "==> Found built application at: ${APP_PATH}"
 
 # Ad-hoc sign if no Developer ID identity is configured
-echo "==> 2. Applying code signature..."
+echo "==> 2. Verifying and applying code signature..."
 codesign --force --deep --sign - "${APP_PATH}" || true
 
 echo "==> 3. Creating Portable ZIP Archive..."
@@ -67,25 +64,32 @@ ZIP_NAME="EasyLiteRoom-${VERSION}-macOS-arm64.zip"
 ditto -c -k --sequesterRsrc --keepParent "${APP_PATH}" "${DIST_DIR}/${ZIP_NAME}"
 echo "    Created: ${DIST_DIR}/${ZIP_NAME}"
 
-echo "==> 4. Preparing DMG Drag-and-Drop Staging Folder..."
+echo "==> 4. Generating Standard macOS Installer Package (.pkg)..."
+PKG_NAME="EasyLiteRoom-${VERSION}-macOS-arm64.pkg"
+pkgbuild --component "${APP_PATH}" \
+         --install-location "/Applications" \
+         --version "${CLEAN_VERSION}" \
+         "${DIST_DIR}/${PKG_NAME}"
+echo "    Created: ${DIST_DIR}/${PKG_NAME}"
+
+echo "==> 5. Preparing DMG Drag-and-Drop Staging Folder..."
 cp -R "${APP_PATH}" "${STAGING_DIR}/EasyLiteRoom.app"
 ln -s /Applications "${STAGING_DIR}/Applications"
 
 DMG_NAME="EasyLiteRoom-${VERSION}-macOS-arm64.dmg"
 DMG_PATH="${DIST_DIR}/${DMG_NAME}"
 
-echo "==> 5. Generating Compressed DMG..."
+echo "==> 6. Generating Compressed DMG..."
 hdiutil create -volname "EasyLiteRoom" \
                -srcfolder "${STAGING_DIR}" \
                -ov \
                -format UDZO \
                "${DMG_PATH}"
-
 echo "    Created: ${DMG_PATH}"
 
-echo "==> 6. Generating SHA-256 Checksums..."
+echo "==> 7. Generating SHA-256 Checksums..."
 cd "${DIST_DIR}"
-shasum -a 256 "${DMG_NAME}" "${ZIP_NAME}" > "checksums.txt"
+shasum -a 256 "${DMG_NAME}" "${PKG_NAME}" "${ZIP_NAME}" > "checksums.txt"
 cd "${ROOT_DIR}"
 
 echo ""
