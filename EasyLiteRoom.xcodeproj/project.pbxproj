@@ -1,0 +1,549 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		50DB1FAC307F2DC800B6A93C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 50DB1F91307F2DC700B6A93C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50DB1F98307F2DC700B6A93C;
+			remoteInfo = EasyLiteRoom;
+		};
+		50DB1FB6307F2DC800B6A93C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 50DB1F91307F2DC700B6A93C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50DB1F98307F2DC700B6A93C;
+			remoteInfo = EasyLiteRoom;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		50DB1F99307F2DC700B6A93C /* EasyLiteRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyLiteRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50DB1FAB307F2DC800B6A93C /* EasyLiteRoomTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyLiteRoomTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		50DB1FB5307F2DC800B6A93C /* EasyLiteRoomUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyLiteRoomUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		50DB1F9B307F2DC700B6A93C /* EasyLiteRoom */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EasyLiteRoom;
+			sourceTree = "<group>";
+		};
+		50DB1FAE307F2DC800B6A93C /* EasyLiteRoomTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EasyLiteRoomTests;
+			sourceTree = "<group>";
+		};
+		50DB1FB8307F2DC800B6A93C /* EasyLiteRoomUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EasyLiteRoomUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		50DB1F96307F2DC700B6A93C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		50DB1FA8307F2DC800B6A93C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		50DB1FB2307F2DC800B6A93C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		50DB1F90307F2DC700B6A93C = {
+			isa = PBXGroup;
+			children = (
+				50DB1F9B307F2DC700B6A93C /* EasyLiteRoom */,
+				50DB1FAE307F2DC800B6A93C /* EasyLiteRoomTests */,
+				50DB1FB8307F2DC800B6A93C /* EasyLiteRoomUITests */,
+				50DB1F9A307F2DC700B6A93C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		50DB1F9A307F2DC700B6A93C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				50DB1F99307F2DC700B6A93C /* EasyLiteRoom.app */,
+				50DB1FAB307F2DC800B6A93C /* EasyLiteRoomTests.xctest */,
+				50DB1FB5307F2DC800B6A93C /* EasyLiteRoomUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		50DB1F98307F2DC700B6A93C /* EasyLiteRoom */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50DB1FBD307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoom" */;
+			buildPhases = (
+				50DB1F95307F2DC700B6A93C /* Sources */,
+				50DB1F96307F2DC700B6A93C /* Frameworks */,
+				50DB1F97307F2DC700B6A93C /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				50DB1F9B307F2DC700B6A93C /* EasyLiteRoom */,
+			);
+			name = EasyLiteRoom;
+			productName = EasyLiteRoom;
+			productReference = 50DB1F99307F2DC700B6A93C /* EasyLiteRoom.app */;
+			productType = "com.apple.product-type.application";
+		};
+		50DB1FAA307F2DC800B6A93C /* EasyLiteRoomTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50DB1FC0307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoomTests" */;
+			buildPhases = (
+				50DB1FA7307F2DC800B6A93C /* Sources */,
+				50DB1FA8307F2DC800B6A93C /* Frameworks */,
+				50DB1FA9307F2DC800B6A93C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				50DB1FAD307F2DC800B6A93C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				50DB1FAE307F2DC800B6A93C /* EasyLiteRoomTests */,
+			);
+			name = EasyLiteRoomTests;
+			productName = EasyLiteRoomTests;
+			productReference = 50DB1FAB307F2DC800B6A93C /* EasyLiteRoomTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		50DB1FB4307F2DC800B6A93C /* EasyLiteRoomUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50DB1FC3307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoomUITests" */;
+			buildPhases = (
+				50DB1FB1307F2DC800B6A93C /* Sources */,
+				50DB1FB2307F2DC800B6A93C /* Frameworks */,
+				50DB1FB3307F2DC800B6A93C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				50DB1FB7307F2DC800B6A93C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				50DB1FB8307F2DC800B6A93C /* EasyLiteRoomUITests */,
+			);
+			name = EasyLiteRoomUITests;
+			productName = EasyLiteRoomUITests;
+			productReference = 50DB1FB5307F2DC800B6A93C /* EasyLiteRoomUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		50DB1F91307F2DC700B6A93C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					50DB1F98307F2DC700B6A93C = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					50DB1FAA307F2DC800B6A93C = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 50DB1F98307F2DC700B6A93C;
+					};
+					50DB1FB4307F2DC800B6A93C = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 50DB1F98307F2DC700B6A93C;
+					};
+				};
+			};
+			buildConfigurationList = 50DB1F94307F2DC700B6A93C /* Build configuration list for PBXProject "EasyLiteRoom" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 50DB1F90307F2DC700B6A93C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 50DB1F9A307F2DC700B6A93C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				50DB1F98307F2DC700B6A93C /* EasyLiteRoom */,
+				50DB1FAA307F2DC800B6A93C /* EasyLiteRoomTests */,
+				50DB1FB4307F2DC800B6A93C /* EasyLiteRoomUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		50DB1F97307F2DC700B6A93C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		50DB1FA9307F2DC800B6A93C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		50DB1FB3307F2DC800B6A93C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		50DB1F95307F2DC700B6A93C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		50DB1FA7307F2DC800B6A93C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		50DB1FB1307F2DC800B6A93C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		50DB1FAD307F2DC800B6A93C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50DB1F98307F2DC700B6A93C /* EasyLiteRoom */;
+			targetProxy = 50DB1FAC307F2DC800B6A93C /* PBXContainerItemProxy */;
+		};
+		50DB1FB7307F2DC800B6A93C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50DB1F98307F2DC700B6A93C /* EasyLiteRoom */;
+			targetProxy = 50DB1FB6307F2DC800B6A93C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		50DB1FBB307F2DC800B6A93C /* Debug configuration for PBXProject "EasyLiteRoom" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		50DB1FBC307F2DC800B6A93C /* Release configuration for PBXProject "EasyLiteRoom" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		50DB1FBE307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoom" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		50DB1FBF307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoom" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		50DB1FC1307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoomTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoomTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EasyLiteRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EasyLiteRoom";
+			};
+			name = Debug;
+		};
+		50DB1FC2307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoomTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoomTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EasyLiteRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EasyLiteRoom";
+			};
+			name = Release;
+		};
+		50DB1FC4307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoomUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoomUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = EasyLiteRoom;
+			};
+			name = Debug;
+		};
+		50DB1FC5307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoomUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX6WPMQBQY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NextGenSoft.EasyLiteRoomUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = EasyLiteRoom;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		50DB1F94307F2DC700B6A93C /* Build configuration list for PBXProject "EasyLiteRoom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50DB1FBB307F2DC800B6A93C /* Debug configuration for PBXProject "EasyLiteRoom" */,
+				50DB1FBC307F2DC800B6A93C /* Release configuration for PBXProject "EasyLiteRoom" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		50DB1FBD307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50DB1FBE307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoom" */,
+				50DB1FBF307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoom" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		50DB1FC0307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoomTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50DB1FC1307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoomTests" */,
+				50DB1FC2307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoomTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		50DB1FC3307F2DC800B6A93C /* Build configuration list for PBXNativeTarget "EasyLiteRoomUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50DB1FC4307F2DC800B6A93C /* Debug configuration for PBXNativeTarget "EasyLiteRoomUITests" */,
+				50DB1FC5307F2DC800B6A93C /* Release configuration for PBXNativeTarget "EasyLiteRoomUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 50DB1F91307F2DC700B6A93C /* Project object */;
+	validationLevel = 1;
+}
