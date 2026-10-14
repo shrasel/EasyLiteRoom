@@ -1,0 +1,48 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode User Data & State
+*.xcuserstate
+project.xcworkspace/xcuserdata/
+*.xcuserdatad
+xcuserdata/
+
+# Xcode DerivedData & Build Outputs
+build/
+DerivedData/
+*.hmap
+*.xccheckout
+*.moved-aside
+
+# Test Results & Code Coverage
+*.xcresult
+*.xcresult/
+*.coverage
+*.coverage/
+
+# Swift Package Manager & SPM Artifacts
+.build/
+Packages/
+.swiftpm/xcode/xcuserdata/
+
+# Instruments & Profiling Traces
+*.trace
+*.dtmp
+
+# Fastlane & App Store distribution
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Local Scratch & Temporary Cache
+.cache/
+*.tmp
+*.bak
+scratch/
