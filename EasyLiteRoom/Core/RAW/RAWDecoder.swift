@@ -12,7 +12,7 @@ import Metal
 import ImageIO
 import UniformTypeIdentifiers
 
-public struct DecodedImage: Sendable {
+public struct DecodedImage: @unchecked Sendable {
     public let texture: MTLTexture
     public let metadata: EXIFMetadata
     public let width: Int
@@ -31,23 +31,21 @@ public enum RAWDecoder {
 
         // Try CIRAWFilter for proprietary camera RAW files
         if let rawFilter = CIRAWFilter(imageURL: url) {
-            // Configure linear, un-boosted camera sensor baseline
-            rawFilter.setValue(false, forKey: CIRAWFilterOption.boostShadowAmount.rawValue)
-            rawFilter.setValue(0.0, forKey: CIRAWFilterOption.baselineExposure.rawValue)
+            // Configure linear, un-boosted camera sensor baseline using typed properties
+            rawFilter.baselineExposure = 0.0
+            rawFilter.boostAmount = 0.0
+            rawFilter.boostShadowAmount = 0.0
 
             if let ciImage = rawFilter.outputImage {
                 let context = CIContext(mtlDevice: MetalDevice.shared.device)
                 let width = Int(ciImage.extent.width)
                 let height = Int(ciImage.extent.height)
 
-                guard let texture = MetalDevice.shared.makeTexture(width: width, height: height, format: .rgba32Float) else {
-                    throw RAWDecoderError.textureAllocationFailed
+                if let texture = MetalDevice.shared.makeTexture(width: width, height: height, format: .rgba32Float) {
+                    let colorSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+                    context.render(ciImage, to: texture, commandBuffer: nil, bounds: ciImage.extent, colorSpace: colorSpace)
+                    return DecodedImage(texture: texture, metadata: metadata, width: width, height: height)
                 }
-
-                let colorSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
-                context.render(ciImage, to: texture, commandBuffer: nil, bounds: ciImage.extent, colorSpace: colorSpace)
-
-                return DecodedImage(texture: texture, metadata: metadata, width: width, height: height)
             }
         }
 

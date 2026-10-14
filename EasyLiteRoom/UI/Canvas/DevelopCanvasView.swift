@@ -199,7 +199,7 @@ public struct DevelopCanvasView: View {
 fileprivate struct SplitClipShape: Shape {
     var splitRatio: CGFloat
 
-    func path(in rect: CGRect) -> Path {
+    nonisolated func path(in rect: CGRect) -> Path {
         var path = Path()
         let startX = rect.width * splitRatio
         path.addRect(CGRect(x: startX, y: 0, width: rect.width - startX, height: rect.height))

@@ -38,11 +38,13 @@ public final class MetalDevice: @unchecked Sendable {
             return existing
         }
 
-        let library: MTLLibrary?
+        var library: MTLLibrary?
         if let mainLib = try? device.makeDefaultLibrary(bundle: Bundle.main) {
             library = mainLib
-        } else {
-            library = device.makeDefaultLibrary()
+        } else if let bundleLib = try? device.makeDefaultLibrary(bundle: Bundle(for: MetalDevice.self)) {
+            library = bundleLib
+        } else if let defaultLib = device.makeDefaultLibrary() {
+            library = defaultLib
         }
 
         guard let validLibrary = library else {

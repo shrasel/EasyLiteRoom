@@ -245,6 +245,13 @@ struct ContentView: View {
     }
 
     private func loadPhoto(from url: URL) {
+        let isAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
         do {
             self.currentPhotoURL = url
             let decoded = try RAWDecoder.decode(url: url)

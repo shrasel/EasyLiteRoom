@@ -61,7 +61,7 @@ struct HistogramComputeTests {
         }
 
         // Fill with pure 1.0 white
-        var pixels = [Float](repeating: 1.0, count: totalPixels * 4)
+        let pixels = [Float](repeating: 1.0, count: totalPixels * 4)
         let region = MTLRegionMake2D(0, 0, width, height)
         let bytesPerRow = width * 4 * MemoryLayout<Float>.size
         pixels.withUnsafeBytes { ptr in

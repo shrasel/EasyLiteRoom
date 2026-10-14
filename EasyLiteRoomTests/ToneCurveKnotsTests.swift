@@ -6,6 +6,8 @@
 //
 
 import Testing
+import Foundation
+import AppKit
 @testable import EasyLiteRoom
 
 struct ToneCurveKnotsTests {
@@ -43,5 +45,27 @@ struct ToneCurveKnotsTests {
         #expect(!meta.cameraModel.isEmpty)
         #expect(meta.iso == 100)
         #expect(meta.summary.contains("ISO 100"))
+    }
+
+    @Test func testImageDecoderFallback() throws {
+        let width = 64
+        let height = 64
+        guard let tex = TextureGenerator.makeTestChartTexture(width: width, height: height),
+              let nsImage = TextureGenerator.makeNSImage(from: tex),
+              let tiffData = nsImage.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiffData),
+              let pngData = rep.representation(using: .png, properties: [:]) else {
+            Issue.record("Failed to generate test png data")
+            return
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".png")
+        try pngData.write(to: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let decoded = try RAWDecoder.decode(url: tempURL)
+        #expect(decoded.width == width)
+        #expect(decoded.height == height)
+        #expect(decoded.texture.width == width)
     }
 }
