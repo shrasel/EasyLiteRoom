@@ -57,7 +57,7 @@ public struct NavigatorView: View {
                         }
                     }
 
-                    zoomButton("200%", active: abs(zoomScale - 3.0) < 0.05) {
+                    zoomButton("300%", active: abs(zoomScale - 3.0) < 0.05) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                             zoomScale = 3.0
                             panOffset = .zero

@@ -27,7 +27,8 @@ struct ContentView: View {
     @State private var isProcessing: Bool = false
     @State private var workspaceMode: Int = 1 // 0 = Develop, 1 = Library, 2 = Export (Default to Library matching Lightroom Classic)
     @State private var isCropActive: Bool = false
-    @State private var selectedSidebarItem: SidebarItem? = .allPhotos
+    @State private var selectedSidebarItem: SidebarItem? = .previousImport
+    @State private var lastImportCount: Int = 1
 
     @State private var zoomScale: CGFloat = 1.0
     @State private var panOffset: CGSize = .zero
@@ -40,12 +41,30 @@ struct ContentView: View {
         switch selection {
         case .allPhotos:
             return filmstripItems
-        case .recentlyAdded:
-            let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
-            let recent = filmstripItems.filter { $0.dateAdded >= cutoff }
-            return recent.isEmpty ? filmstripItems : recent
-        case .favorites:
+        case .allSynced:
+            return []
+        case .quickCollection, .favorites:
             return filmstripItems.filter { $0.isFavorite || $0.rating >= 4 }
+        case .previousImport, .recentlyAdded:
+            let count = max(1, lastImportCount)
+            return Array(filmstripItems.suffix(count))
+        case .folder(let name, let path):
+            return filmstripItems.filter { item in
+                guard let url = item.url else { return item.title.localizedCaseInsensitiveContains(name) }
+                return url.deletingLastPathComponent().path == path || url.deletingLastPathComponent().lastPathComponent == name
+            }
+        case .collection(let name):
+            if name == "Five Stars" {
+                return filmstripItems.filter { $0.rating == 5 }
+            } else if name == "Past Month" {
+                let cutoff = Date().addingTimeInterval(-30 * 24 * 3600)
+                return filmstripItems.filter { $0.dateAdded >= cutoff }
+            } else if name == "Recently Modified" {
+                return Array(filmstripItems.suffix(max(1, lastImportCount)))
+            }
+            return filmstripItems
+        case .publishService:
+            return filmstripItems
         case .colorChecker:
             return filmstripItems.filter { $0.title.contains("Color Calibration") || $0.title.contains("ColorChecker") }
         }
@@ -86,109 +105,31 @@ struct ContentView: View {
             // MARK: - 3-Column Professional Photography Layout
             HStack(spacing: 0) {
 
-                // 1. LEFT PANEL: Navigator + Catalog + Import/Export Actions
+                // 1. LEFT PANEL: Lightroom Classic Navigator + Catalog + Folders + Collections + Publish Services
                 if isLeftPanelExpanded {
-                    VStack(spacing: 0) {
-                        // Navigator mini-map with zoom modes (FIT | 100% | 200%)
-                        NavigatorView(
-                            image: renderedImage ?? originalImage,
-                            orientationRotation: parameters.geometry.orientationRotation,
-                            zoomScale: $zoomScale,
-                            panOffset: $panOffset
-                        )
-
-                        Divider()
-
-                        // Catalog section
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                                Text("Catalog")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color(nsColor: .windowBackgroundColor))
-
-                            Divider()
-
-                            List(selection: $selectedSidebarItem) {
-                                SidebarRow(
-                                    title: "All Photographs",
-                                    systemImage: "photo.stack",
-                                    count: filmstripItems.count,
-                                    isSelected: selectedSidebarItem == .allPhotos
-                                ) {
-                                    handleSidebarSelection(.allPhotos)
-                                }
-                                .tag(SidebarItem.allPhotos)
-
-                                SidebarRow(
-                                    title: "Recently Added",
-                                    systemImage: "clock",
-                                    count: recentItemsCount,
-                                    isSelected: selectedSidebarItem == .recentlyAdded
-                                ) {
-                                    handleSidebarSelection(.recentlyAdded)
-                                }
-                                .tag(SidebarItem.recentlyAdded)
-
-                                SidebarRow(
-                                    title: "Favorites",
-                                    systemImage: "heart.fill",
-                                    iconColor: .red,
-                                    count: favoriteItemsCount,
-                                    isSelected: selectedSidebarItem == .favorites
-                                ) {
-                                    handleSidebarSelection(.favorites)
-                                }
-                                .tag(SidebarItem.favorites)
-
-                                SidebarRow(
-                                    title: "Color Calibration Chart",
-                                    systemImage: "checkerboard.rectangle",
-                                    iconColor: .blue,
-                                    isSelected: selectedSidebarItem == .colorChecker
-                                ) {
-                                    handleSidebarSelection(.colorChecker)
-                                }
-                                .tag(SidebarItem.colorChecker)
-                            }
-                            .listStyle(.sidebar)
+                    LibrarySidebarView(
+                        renderedImage: renderedImage,
+                        originalImage: originalImage,
+                        orientationRotation: parameters.geometry.orientationRotation,
+                        zoomScale: $zoomScale,
+                        panOffset: $panOffset,
+                        filmstripItems: filmstripItems,
+                        selectedSidebarItem: $selectedSidebarItem,
+                        lastImportCount: lastImportCount,
+                        favoriteItemsCount: favoriteItemsCount,
+                        onImport: {
+                            openImageFile()
+                        },
+                        onExport: {
+                            showExportSheet = true
+                        },
+                        onSelectFolder: { url in
+                            handleFolderSelection(url: url)
+                        },
+                        onAddFolder: {
+                            openFolderPicker()
                         }
-
-                        Divider()
-
-                        // Bottom Actions: Import... & Export... (Side by Side matching Lightroom Classic)
-                        HStack(spacing: 8) {
-                            Button {
-                                openImageFile()
-                            } label: {
-                                Text("Import...")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.regular)
-
-                            Button {
-                                showExportSheet = true
-                            } label: {
-                                Text("Export...")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.regular)
-                        }
-                        .padding(10)
-                        .background(Color(nsColor: .windowBackgroundColor))
-                    }
-                    .frame(width: 230)
+                    )
 
                     Divider()
                 }
@@ -534,7 +475,7 @@ struct ContentView: View {
     private func handleSidebarSelection(_ item: SidebarItem) {
         selectedSidebarItem = item
         switch item {
-        case .allPhotos, .recentlyAdded, .favorites:
+        case .allPhotos, .allSynced, .quickCollection, .previousImport, .recentlyAdded, .favorites, .folder, .collection, .publishService:
             break
         case .colorChecker:
             loadColorCheckerChart()
@@ -633,9 +574,43 @@ struct ContentView: View {
         panel.canChooseDirectories = false
 
         if panel.runModal() == .OK {
+            lastImportCount = panel.urls.count
             for url in panel.urls {
                 loadPhoto(from: url)
             }
+            selectedSidebarItem = .previousImport
+        }
+    }
+
+    private func openFolderPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose Folder"
+        panel.message = "Choose a folder to add to EasyLiteRoom Folders"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            selectedSidebarItem = .folder(name: url.lastPathComponent, path: url.path)
+            handleFolderSelection(url: url)
+        }
+    }
+
+    private func handleFolderSelection(url: URL) {
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+            let imageFiles = files.filter { ["jpg", "jpeg", "png", "arw", "cr2", "nef", "dng", "tiff", "tif"].contains($0.pathExtension.lowercased()) }
+            if !imageFiles.isEmpty {
+                lastImportCount = imageFiles.count
+                for file in imageFiles {
+                    if !filmstripItems.contains(where: { $0.url == file }) {
+                        loadPhoto(from: file)
+                    }
+                }
+                selectedSidebarItem = .folder(name: url.lastPathComponent, path: url.path)
+            }
+        } catch {
+            print("Failed to read directory \(url.path): \(error.localizedDescription)")
         }
     }
 
@@ -689,58 +664,46 @@ struct ContentView: View {
     }
 }
 
-public enum SidebarItem: String, Hashable, CaseIterable, Identifiable {
-    case allPhotos = "all_photos"
-    case recentlyAdded = "recently_added"
-    case favorites = "favorites"
-    case colorChecker = "color_checker"
+public enum SidebarItem: Hashable, Identifiable {
+    case allPhotos
+    case allSynced
+    case quickCollection
+    case previousImport
+    case recentlyAdded
+    case favorites
+    case colorChecker
+    case folder(name: String, path: String)
+    case collection(name: String)
+    case publishService(name: String)
 
-    public var id: String { rawValue }
+    public var id: String {
+        switch self {
+        case .allPhotos: return "all_photos"
+        case .allSynced: return "all_synced"
+        case .quickCollection: return "quick_collection"
+        case .previousImport: return "previous_import"
+        case .recentlyAdded: return "recently_added"
+        case .favorites: return "favorites"
+        case .colorChecker: return "color_checker"
+        case .folder(let name, let path): return "folder_\(path)_\(name)"
+        case .collection(let name): return "col_\(name)"
+        case .publishService(let name): return "pub_\(name)"
+        }
+    }
 
     public var title: String {
         switch self {
         case .allPhotos: return "All Photographs"
-        case .recentlyAdded: return "Recently Added"
-        case .favorites: return "Favorites"
+        case .allSynced: return "All Synced Photographs"
+        case .quickCollection: return "Quick Collection +"
+        case .previousImport: return "Previous Import"
+        case .recentlyAdded: return "Previous Import"
+        case .favorites: return "Quick Collection +"
         case .colorChecker: return "Color Calibration Chart"
+        case .folder(let name, _): return name
+        case .collection(let name): return name
+        case .publishService(let name): return name
         }
-    }
-}
-
-fileprivate struct SidebarRow: View {
-    let title: String
-    let systemImage: String
-    var iconColor: Color? = nil
-    var count: Int? = nil
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .foregroundStyle(iconColor ?? (isSelected ? .primary : .secondary))
-                    .frame(width: 18)
-
-                Text(title)
-                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                if let count = count, count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.15))
-                        .clipShape(Capsule())
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
