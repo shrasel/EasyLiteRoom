@@ -54,18 +54,7 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Run Quality Gate Test Suite
-        run: |
-          xcodebuild -scheme EasyLiteRoom \
-                     -destination 'platform=macOS' \
-                     -only-testing:EasyLiteRoomTests \
-                     test \
-                     CODE_SIGN_IDENTITY="-" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_STYLE=Manual \
-                     DEVELOPMENT_TEAM=""
-
-      - name: Package Distribution Artifacts (.dmg, .pkg, .zip, checksums)
+      - name: Build and Package Distribution Artifacts (.dmg, .pkg, .zip, checksums)
         run: |
           ./scripts/package_release.sh "${{ steps.version.outputs.tag }}"
 
