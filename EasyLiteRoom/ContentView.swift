@@ -3,7 +3,7 @@
 //  EasyLiteRoom
 //
 //  Created by Shahjahan Rasel on 10/13/26.
-//  Main application workspace combining 120Hz canvas and develop inspector.
+//  Main application workspace combining 120Hz canvas, develop inspector, live histogram, and RAW engine.
 //
 
 import SwiftUI
@@ -18,6 +18,8 @@ struct ContentView: View {
     @State private var showSplitComparison: Bool = false
     @State private var inputTexture: MTLTexture?
     @State private var outputTexture: MTLTexture?
+    @State private var histogramData: HistogramData = .empty
+    @State private var metadata: EXIFMetadata? = .sample
     @State private var splineLUT: [Float] = []
     @State private var isProcessing: Bool = false
 
@@ -65,6 +67,7 @@ struct ContentView: View {
                 DevelopCanvasView(
                     image: renderedImage,
                     originalImage: originalImage,
+                    metadata: metadata,
                     showSplitComparison: $showSplitComparison
                 )
 
@@ -73,6 +76,7 @@ struct ContentView: View {
                 // Trailing Develop Inspector
                 DevelopInspectorView(
                     parameters: $parameters,
+                    histogramData: histogramData,
                     onReset: {
                         parameters = .default
                         updatePipeline()
@@ -119,6 +123,16 @@ struct ContentView: View {
                         parameters.vibrance = 12
                         updatePipeline()
                     }
+                    Divider()
+                    Button("Subtle S-Curve (Rich Contrast)") {
+                        parameters.toneCurveKnots = [
+                            SplinePoint(x: 0.0, y: 0.0),
+                            SplinePoint(x: 0.25, y: 0.18),
+                            SplinePoint(x: 0.75, y: 0.82),
+                            SplinePoint(x: 1.0, y: 1.0)
+                        ]
+                        updatePipeline()
+                    }
                 } label: {
                     Label("Presets", systemImage: "wand.and.stars")
                 }
@@ -143,6 +157,7 @@ struct ContentView: View {
         guard let tex = TextureGenerator.makeTestChartTexture(width: 1024, height: 768) else { return }
         self.inputTexture = tex
         self.outputTexture = MetalDevice.shared.makeTexture(width: 1024, height: 768)
+        self.metadata = .sample
 
         // Generate baseline unadjusted NSImage
         if let orig = TextureGenerator.makeNSImage(from: tex) {
@@ -167,6 +182,11 @@ struct ContentView: View {
                 lut: lut
             )
 
+            // Compute live 4-channel GPU histogram
+            if let hist = try? MetalDevice.shared.computeHistogram(for: output) {
+                self.histogramData = hist
+            }
+
             if let result = TextureGenerator.makeNSImage(from: output) {
                 self.renderedImage = result
             }
@@ -187,54 +207,20 @@ struct ContentView: View {
     }
 
     private func loadPhoto(from url: URL) {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            return
+        do {
+            let decoded = try RAWDecoder.decode(url: url)
+            self.inputTexture = decoded.texture
+            self.outputTexture = MetalDevice.shared.makeTexture(width: decoded.width, height: decoded.height)
+            self.metadata = decoded.metadata
+
+            if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
+                self.originalImage = orig
+            }
+
+            updatePipeline()
+        } catch {
+            print("Failed to decode image from \(url.lastPathComponent): \(error.localizedDescription)")
         }
-
-        let width = cgImage.width
-        let height = cgImage.height
-
-        guard let inTex = MetalDevice.shared.makeTexture(width: width, height: height),
-              let outTex = MetalDevice.shared.makeTexture(width: width, height: height) else {
-            return
-        }
-
-        // Upload CGImage to inTex in 32-bit float
-        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        var rawBytes = [UInt8](repeating: 0, count: width * height * 4)
-        guard let context = CGContext(
-            data: &rawBytes,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return }
-
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-
-        // Convert to linear 32-bit float
-        var floatPixels = [Float](repeating: 0.0, count: width * height * 4)
-        for i in 0..<(width * height * 4) {
-            floatPixels[i] = WorkingColorSpace.sRGB.toLinear(Float(rawBytes[i]) / 255.0)
-        }
-
-        let region = MTLRegionMake2D(0, 0, width, height)
-        let bytesPerRow = width * 4 * MemoryLayout<Float>.size
-        floatPixels.withUnsafeBytes { ptr in
-            inTex.replace(region: region, mipmapLevel: 0, withBytes: ptr.baseAddress!, bytesPerRow: bytesPerRow)
-        }
-
-        self.inputTexture = inTex
-        self.outputTexture = outTex
-
-        if let orig = TextureGenerator.makeNSImage(from: inTex) {
-            self.originalImage = orig
-        }
-
-        updatePipeline()
     }
 }
 

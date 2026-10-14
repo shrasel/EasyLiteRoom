@@ -3,23 +3,29 @@
 //  EasyLiteRoom
 //
 //  Created by Shahjahan Rasel on 10/13/26.
-//  Modern macOS develop inspector with precision adjustment controls.
+//  Modern macOS develop inspector with precision adjustment controls, live histogram, and tone curve.
 //
 
 import SwiftUI
 
 public struct DevelopInspectorView: View {
     @Binding var parameters: AdjustmentParameters
+    let histogramData: HistogramData
     var onReset: () -> Void
 
-    public init(parameters: Binding<AdjustmentParameters>, onReset: @escaping () -> Void) {
+    public init(
+        parameters: Binding<AdjustmentParameters>,
+        histogramData: HistogramData,
+        onReset: @escaping () -> Void
+    ) {
         self._parameters = parameters
+        self.histogramData = histogramData
         self.onReset = onReset
     }
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
 
                 // Header
                 HStack {
@@ -34,7 +40,15 @@ public struct DevelopInspectorView: View {
                     .foregroundStyle(.secondary)
                     .help("Reset all adjustments to default")
                 }
-                .padding(.bottom, 4)
+
+                // Live GPU Histogram Component
+                HistogramView(data: histogramData)
+
+                // Tone Curve Section
+                GroupBox(label: sectionHeader(title: "Tone Curve", icon: "waveform.path")) {
+                    InteractiveToneCurve(knots: $parameters.toneCurveKnots)
+                        .padding(.top, 4)
+                }
 
                 // White Balance Section
                 GroupBox(label: sectionHeader(title: "White Balance", icon: "sun.max.fill")) {
@@ -140,7 +154,7 @@ public struct DevelopInspectorView: View {
             }
             .padding(14)
         }
-        .frame(width: 290)
+        .frame(width: 300)
         .background(.ultraThinMaterial)
     }
 

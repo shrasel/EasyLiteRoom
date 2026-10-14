@@ -12,6 +12,7 @@ import AppKit
 public struct DevelopCanvasView: View {
     let image: NSImage?
     let originalImage: NSImage?
+    let metadata: EXIFMetadata?
     @Binding var showSplitComparison: Bool
     @State private var splitPosition: CGFloat = 0.5
     @State private var zoomScale: CGFloat = 1.0
@@ -20,10 +21,12 @@ public struct DevelopCanvasView: View {
     public init(
         image: NSImage?,
         originalImage: NSImage?,
+        metadata: EXIFMetadata? = nil,
         showSplitComparison: Binding<Bool>
     ) {
         self.image = image
         self.originalImage = originalImage
+        self.metadata = metadata
         self._showSplitComparison = showSplitComparison
     }
 
@@ -168,7 +171,14 @@ public struct DevelopCanvasView: View {
 
                     // Bottom info bar overlay
                     HStack {
-                        Text("32-bit Float Linear • ProPhoto RGB Working Space • Metal 3 GPU Compute")
+                        if let meta = metadata {
+                            Text(meta.summary)
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.primary)
+                            Text("•")
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("32-bit Float Linear • ProPhoto RGB • Metal 3")
                             .font(.system(size: 10, weight: .regular))
                             .foregroundStyle(.secondary)
                         Spacer()
