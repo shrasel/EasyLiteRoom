@@ -27,32 +27,93 @@ struct ContentView: View {
     @State private var isProcessing: Bool = false
     @State private var workspaceMode: Int = 0 // 0 = Develop, 1 = Library, 2 = Export
     @State private var isCropActive: Bool = false
+    @State private var selectedSidebarItem: SidebarItem? = .allPhotos
+
+    private var filteredCatalogItems: [FilmstripItem] {
+        guard let selection = selectedSidebarItem else { return filmstripItems }
+        switch selection {
+        case .allPhotos:
+            return filmstripItems
+        case .recentlyAdded:
+            let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+            let recent = filmstripItems.filter { $0.dateAdded >= cutoff }
+            return recent.isEmpty ? filmstripItems : recent
+        case .favorites:
+            return filmstripItems.filter { $0.isFavorite || $0.rating >= 4 }
+        case .colorChecker:
+            return filmstripItems.filter { $0.title.contains("Color Calibration") || $0.title.contains("ColorChecker") }
+        }
+    }
+
+    private var recentItemsCount: Int {
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        return filmstripItems.filter { $0.dateAdded >= cutoff }.count
+    }
+
+    private var favoriteItemsCount: Int {
+        return filmstripItems.filter { $0.isFavorite || $0.rating >= 4 }.count
+    }
 
     var body: some View {
         NavigationSplitView {
             // Sidebar: Library / Collections
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("Library")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
+                    .padding(.bottom, 6)
 
-                List {
+                List(selection: $selectedSidebarItem) {
                     Section("Catalog") {
-                        Label("All Photos", systemImage: "photo.stack")
-                            .badge(max(1, filmstripItems.count))
-                        Label("Recently Added", systemImage: "clock")
-                        Label("Favorites", systemImage: "heart")
+                        SidebarRow(
+                            title: "All Photos",
+                            systemImage: "photo.stack",
+                            count: filmstripItems.count,
+                            isSelected: selectedSidebarItem == .allPhotos
+                        ) {
+                            handleSidebarSelection(.allPhotos)
+                        }
+                        .tag(SidebarItem.allPhotos)
+
+                        SidebarRow(
+                            title: "Recently Added",
+                            systemImage: "clock",
+                            count: recentItemsCount,
+                            isSelected: selectedSidebarItem == .recentlyAdded
+                        ) {
+                            handleSidebarSelection(.recentlyAdded)
+                        }
+                        .tag(SidebarItem.recentlyAdded)
+
+                        SidebarRow(
+                            title: "Favorites",
+                            systemImage: "heart.fill",
+                            iconColor: .red,
+                            count: favoriteItemsCount,
+                            isSelected: selectedSidebarItem == .favorites
+                        ) {
+                            handleSidebarSelection(.favorites)
+                        }
+                        .tag(SidebarItem.favorites)
                     }
 
                     Section("Calibration") {
-                        Label("ColorChecker Chart", systemImage: "checkerboard.rectangle")
+                        SidebarRow(
+                            title: "ColorChecker Chart",
+                            systemImage: "checkerboard.rectangle",
+                            iconColor: .blue,
+                            isSelected: selectedSidebarItem == .colorChecker
+                        ) {
+                            handleSidebarSelection(.colorChecker)
+                        }
+                        .tag(SidebarItem.colorChecker)
                     }
                 }
                 .listStyle(.sidebar)
 
-                Spacer()
+                Divider()
 
                 // File Open Button
                 Button {
@@ -70,17 +131,26 @@ struct ContentView: View {
             if workspaceMode == 1 {
                 // Workspace: Full Catalog Library Grid
                 LibraryGridView(
-                    items: filmstripItems,
+                    items: filteredCatalogItems,
                     selectedId: $selectedFilmstripId,
+                    collectionTitle: selectedSidebarItem?.title ?? "All Photos",
                     onOpenPhoto: { item in
                         selectedFilmstripId = item.id
-                        if let url = item.url {
+                        if item.title.contains("Color Calibration") || item.title.contains("ColorChecker") {
+                            loadColorCheckerChart()
+                        } else if let url = item.url {
                             loadPhoto(from: url)
                         }
                         workspaceMode = 0
                     },
                     onImport: {
                         openImageFile()
+                    },
+                    onToggleFavorite: { item in
+                        toggleFavorite(for: item.id)
+                    },
+                    onSetRating: { item, rating in
+                        setRating(for: item.id, rating: rating)
                     }
                 )
             } else {
@@ -115,13 +185,21 @@ struct ContentView: View {
 
                     // Horizontal Bottom Filmstrip
                     FilmstripView(
-                        items: filmstripItems,
+                        items: filteredCatalogItems,
                         selectedId: $selectedFilmstripId,
                         onSelect: { item in
                             selectedFilmstripId = item.id
-                            if let url = item.url {
+                            if item.title.contains("Color Calibration") || item.title.contains("ColorChecker") {
+                                loadColorCheckerChart()
+                            } else if let url = item.url {
                                 loadPhoto(from: url)
                             }
+                        },
+                        onToggleFavorite: { item in
+                            toggleFavorite(for: item.id)
+                        },
+                        onSetRating: { item, rating in
+                            setRating(for: item.id, rating: rating)
                         }
                     )
                 }
@@ -235,12 +313,92 @@ struct ContentView: View {
         // Generate baseline unadjusted NSImage
         if let orig = TextureGenerator.makeNSImage(from: tex) {
             self.originalImage = orig
-            let initialItem = FilmstripItem(title: "Color Calibration Chart", image: orig, isRAW: true, rating: 5)
+            let initialItem = FilmstripItem(
+                title: "Color Calibration Chart",
+                image: orig,
+                isRAW: true,
+                rating: 5,
+                url: nil,
+                dateAdded: Date(),
+                isFavorite: true
+            )
             self.filmstripItems = [initialItem]
             self.selectedFilmstripId = initialItem.id
         }
 
         updatePipeline()
+    }
+
+    private func handleSidebarSelection(_ item: SidebarItem) {
+        selectedSidebarItem = item
+        switch item {
+        case .allPhotos:
+            workspaceMode = 1
+        case .recentlyAdded:
+            workspaceMode = 1
+        case .favorites:
+            workspaceMode = 1
+        case .colorChecker:
+            loadColorCheckerChart()
+            workspaceMode = 0
+        }
+    }
+
+    private func loadColorCheckerChart() {
+        if let existing = filmstripItems.first(where: { $0.title.contains("Color Calibration") || $0.title.contains("ColorChecker") }) {
+            selectedFilmstripId = existing.id
+            if let tex = TextureGenerator.makeTestChartTexture(width: 1024, height: 768) {
+                self.inputTexture = tex
+                self.outputTexture = MetalDevice.shared.makeTexture(width: 1024, height: 768)
+                self.originalImage = existing.image
+                self.metadata = .sample
+                self.currentPhotoURL = nil
+                self.parameters = .default
+                self.isCropActive = false
+                updatePipeline()
+            }
+            return
+        }
+
+        guard let tex = TextureGenerator.makeTestChartTexture(width: 1024, height: 768) else { return }
+        self.inputTexture = tex
+        self.outputTexture = MetalDevice.shared.makeTexture(width: 1024, height: 768)
+        self.metadata = .sample
+        self.currentPhotoURL = nil
+        self.parameters = .default
+        self.isCropActive = false
+
+        if let orig = TextureGenerator.makeNSImage(from: tex) {
+            self.originalImage = orig
+            let item = FilmstripItem(
+                title: "Color Calibration Chart",
+                image: orig,
+                isRAW: true,
+                rating: 5,
+                url: nil,
+                dateAdded: Date(),
+                isFavorite: true
+            )
+            self.filmstripItems.append(item)
+            self.selectedFilmstripId = item.id
+        }
+
+        updatePipeline()
+    }
+
+    private func toggleFavorite(for id: UUID) {
+        if let index = filmstripItems.firstIndex(where: { $0.id == id }) {
+            filmstripItems[index].isFavorite.toggle()
+        }
+    }
+
+    private func setRating(for id: UUID, rating: Int) {
+        if let index = filmstripItems.firstIndex(where: { $0.id == id }) {
+            filmstripItems[index].rating = rating
+            if rating >= 4 {
+                filmstripItems[index].isFavorite = true
+            }
+        }
     }
 
     private func updatePipeline() {
@@ -274,11 +432,14 @@ struct ContentView: View {
     private func openImageFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.image, .rawImage]
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
 
-        if panel.runModal() == .OK, let url = panel.url {
-            loadPhoto(from: url)
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                loadPhoto(from: url)
+            }
+            workspaceMode = 0
         }
     }
 
@@ -304,9 +465,19 @@ struct ContentView: View {
                 self.parameters = .default
             }
 
-            if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
+            if let existingIndex = filmstripItems.firstIndex(where: { $0.url == url }) {
+                self.selectedFilmstripId = filmstripItems[existingIndex].id
+            } else if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
                 self.originalImage = orig
-                let newItem = FilmstripItem(title: url.lastPathComponent, image: orig, isRAW: true, rating: 0, url: url)
+                let newItem = FilmstripItem(
+                    title: url.lastPathComponent,
+                    image: orig,
+                    isRAW: true,
+                    rating: 0,
+                    url: url,
+                    dateAdded: Date(),
+                    isFavorite: false
+                )
                 self.filmstripItems.append(newItem)
                 self.selectedFilmstripId = newItem.id
             }
@@ -315,6 +486,61 @@ struct ContentView: View {
         } catch {
             print("Failed to decode image from \(url.lastPathComponent): \(error.localizedDescription)")
         }
+    }
+}
+
+public enum SidebarItem: String, Hashable, CaseIterable, Identifiable {
+    case allPhotos = "all_photos"
+    case recentlyAdded = "recently_added"
+    case favorites = "favorites"
+    case colorChecker = "color_checker"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .allPhotos: return "All Photos"
+        case .recentlyAdded: return "Recently Added"
+        case .favorites: return "Favorites"
+        case .colorChecker: return "ColorChecker Chart"
+        }
+    }
+}
+
+fileprivate struct SidebarRow: View {
+    let title: String
+    let systemImage: String
+    var iconColor: Color? = nil
+    var count: Int? = nil
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(iconColor ?? (isSelected ? .primary : .secondary))
+                    .frame(width: 18)
+
+                Text(title)
+                    .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if let count = count, count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

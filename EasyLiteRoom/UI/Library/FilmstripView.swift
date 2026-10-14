@@ -16,14 +16,36 @@ public struct FilmstripItem: Identifiable, @unchecked Sendable, Equatable {
     public let isRAW: Bool
     public var rating: Int
     public let url: URL?
+    public var dateAdded: Date
+    public var isFavorite: Bool
 
-    public init(id: UUID = UUID(), title: String, image: NSImage?, isRAW: Bool = true, rating: Int = 0, url: URL? = nil) {
+    public init(
+        id: UUID = UUID(),
+        title: String,
+        image: NSImage?,
+        isRAW: Bool = true,
+        rating: Int = 0,
+        url: URL? = nil,
+        dateAdded: Date = Date(),
+        isFavorite: Bool = false
+    ) {
         self.id = id
         self.title = title
         self.image = image
         self.isRAW = isRAW
         self.rating = rating
         self.url = url
+        self.dateAdded = dateAdded
+        self.isFavorite = isFavorite || (rating >= 4)
+    }
+
+    public static func == (lhs: FilmstripItem, rhs: FilmstripItem) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.title == rhs.title &&
+        lhs.isRAW == rhs.isRAW &&
+        lhs.rating == rhs.rating &&
+        lhs.url == rhs.url &&
+        lhs.isFavorite == rhs.isFavorite
     }
 }
 
@@ -31,15 +53,21 @@ public struct FilmstripView: View {
     let items: [FilmstripItem]
     @Binding var selectedId: UUID?
     var onSelect: (FilmstripItem) -> Void
+    var onToggleFavorite: ((FilmstripItem) -> Void)? = nil
+    var onSetRating: ((FilmstripItem, Int) -> Void)? = nil
 
     public init(
         items: [FilmstripItem],
         selectedId: Binding<UUID?>,
-        onSelect: @escaping (FilmstripItem) -> Void
+        onSelect: @escaping (FilmstripItem) -> Void,
+        onToggleFavorite: ((FilmstripItem) -> Void)? = nil,
+        onSetRating: ((FilmstripItem, Int) -> Void)? = nil
     ) {
         self.items = items
         self._selectedId = selectedId
         self.onSelect = onSelect
+        self.onToggleFavorite = onToggleFavorite
+        self.onSetRating = onSetRating
     }
 
     public var body: some View {
@@ -64,6 +92,23 @@ public struct FilmstripView: View {
                                         Image(systemName: "photo")
                                             .foregroundStyle(.secondary)
                                     )
+                            }
+
+                            // Favorite Indicator badge
+                            if item.isFavorite {
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: "heart.fill")
+                                            .font(.system(size: 8))
+                                            .foregroundStyle(.red)
+                                            .padding(3)
+                                            .background(.ultraThinMaterial)
+                                            .clipShape(Circle())
+                                    }
+                                    Spacer()
+                                }
+                                .padding(2)
                             }
 
                             // RAW badge
@@ -95,6 +140,39 @@ public struct FilmstripView: View {
                     .onTapGesture {
                         selectedId = item.id
                         onSelect(item)
+                    }
+                    .contextMenu {
+                        Button {
+                            selectedId = item.id
+                            onSelect(item)
+                        } label: {
+                            Label("Develop Photo", systemImage: "slider.horizontal.3")
+                        }
+
+                        Button {
+                            onToggleFavorite?(item)
+                        } label: {
+                            Label(item.isFavorite ? "Remove Favorite" : "Mark as Favorite", systemImage: item.isFavorite ? "heart.slash" : "heart.fill")
+                        }
+
+                        Menu("Set Rating") {
+                            ForEach(1...5, id: \.self) { star in
+                                Button("\(star) Stars") {
+                                    onSetRating?(item, star)
+                                }
+                            }
+                            Divider()
+                            Button("Clear Rating") {
+                                onSetRating?(item, 0)
+                            }
+                        }
+
+                        if let url = item.url {
+                            Divider()
+                            Button("Show in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([url])
+                            }
+                        }
                     }
                 }
             }
