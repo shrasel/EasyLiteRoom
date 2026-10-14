@@ -21,74 +21,103 @@ public struct DecodedImage: @unchecked Sendable {
 
 public enum RAWDecoder {
 
-    /// Loads and decodes a RAW or standard image file from a file URL directly into a linear 32-bit float Metal texture.
+    /// Loads and decodes a RAW or standard image file from a file URL directly into an upright linear 32-bit float Metal texture.
     public static func decode(url: URL) throws -> DecodedImage {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
             throw RAWDecoderError.fileCouldNotBeRead
         }
 
-        let metadata = EXIFMetadata.extract(from: source)
+        var metadata = EXIFMetadata.extract(from: source)
 
-        // Try CIRAWFilter for proprietary camera RAW files
-        if let rawFilter = CIRAWFilter(imageURL: url) {
-            // Configure linear, un-boosted camera sensor baseline using typed properties
-            rawFilter.baselineExposure = 0.0
-            rawFilter.boostAmount = 0.0
-            rawFilter.boostShadowAmount = 0.0
-
-            if let ciImage = rawFilter.outputImage {
-                let context = CIContext(mtlDevice: MetalDevice.shared.device)
-                let width = Int(ciImage.extent.width)
-                let height = Int(ciImage.extent.height)
-
-                if let texture = MetalDevice.shared.makeTexture(width: width, height: height, format: .rgba32Float) {
-                    let colorSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
-                    context.render(ciImage, to: texture, commandBuffer: nil, bounds: ciImage.extent, colorSpace: colorSpace)
-                    return DecodedImage(texture: texture, metadata: metadata, width: width, height: height)
+        // 1. Extract native EXIF orientation from image source properties
+        var orientation: CGImagePropertyOrientation = .up
+        if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+            if let rawOrient = properties[kCGImagePropertyOrientation] as? UInt32,
+               let o = CGImagePropertyOrientation(rawValue: rawOrient) {
+                orientation = o
+            } else if let rawOrient = properties[kCGImagePropertyOrientation] as? Int,
+                      let o = CGImagePropertyOrientation(rawValue: UInt32(rawOrient)) {
+                orientation = o
+            } else if let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+                if let rawOrient = tiff[kCGImagePropertyTIFFOrientation] as? UInt32,
+                   let o = CGImagePropertyOrientation(rawValue: rawOrient) {
+                    orientation = o
+                } else if let rawOrient = tiff[kCGImagePropertyTIFFOrientation] as? Int,
+                          let o = CGImagePropertyOrientation(rawValue: UInt32(rawOrient)) {
+                    orientation = o
                 }
             }
         }
 
-        // Standard fallback for TIFF, DNG, JPEG, PNG via CGImageSource
-        guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        // 2. Identify file format
+        let ext = url.pathExtension.lowercased()
+        let uti = UTType(filenameExtension: ext)
+        let isCameraRAW = uti?.conforms(to: .rawImage) ?? [
+            "dng", "cr2", "cr3", "nef", "arw", "raf", "rw2", "orf", "pef", "raw", "srw", "srf", "mrw"
+        ].contains(ext)
+
+        var ciImage: CIImage? = nil
+
+        // 3. For camera RAW files, utilize CIRAWFilter for sensor-level linear demosaicing
+        if isCameraRAW, let rawFilter = CIRAWFilter(imageURL: url) {
+            rawFilter.baselineExposure = 0.0
+            rawFilter.boostAmount = 0.0
+            rawFilter.boostShadowAmount = 0.0
+            rawFilter.orientation = orientation
+            ciImage = rawFilter.outputImage
+        }
+
+        // 4. For standard formats (JPEG, PNG, HEIC, TIFF) or RAW fallback, use CIImage with EXIF orientation handling
+        if ciImage == nil {
+            ciImage = CIImage(contentsOf: url, options: [
+                .applyOrientationProperty: true
+            ])
+        }
+
+        // 5. Final fallback to CGImageSource rasterization if needed
+        if ciImage == nil, let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            ciImage = CIImage(cgImage: cgImage).oriented(orientation)
+        }
+
+        guard let imageToRender = ciImage else {
             throw RAWDecoderError.decodingFailed
         }
 
-        let width = cgImage.width
-        let height = cgImage.height
+        // 6. Compute dimensions and extent
+        let extent = imageToRender.extent
+        let width = max(1, Int(round(extent.width)))
+        let height = max(1, Int(round(extent.height)))
+
+        metadata.width = width
+        metadata.height = height
 
         guard let texture = MetalDevice.shared.makeTexture(width: width, height: height, format: .rgba32Float) else {
             throw RAWDecoderError.textureAllocationFailed
         }
 
-        let srgbSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        var byteBuffer = [UInt8](repeating: 0, count: width * height * 4)
+        // 7. Align Core Image bottom-left coordinate space to Metal texture top-left coordinate space:
+        //    First shift origin to (0, 0), then invert Y axis: y_metal = height - y_ci.
+        let originNormalized = imageToRender.transformed(by: CGAffineTransform(translationX: -extent.origin.x, y: -extent.origin.y))
+        let metalReadyImage = originNormalized.transformed(by: CGAffineTransform(translationX: 0, y: CGFloat(height)).scaledBy(x: 1, y: -1))
 
-        guard let context = CGContext(
-            data: &byteBuffer,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: srgbSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
+        let context = CIContext(mtlDevice: MetalDevice.shared.device)
+        let colorSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let renderBounds = CGRect(x: 0, y: 0, width: width, height: height)
+
+        guard let commandBuffer = MetalDevice.shared.commandQueue.makeCommandBuffer() else {
             throw RAWDecoderError.decodingFailed
         }
 
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        context.render(
+            metalReadyImage,
+            to: texture,
+            commandBuffer: commandBuffer,
+            bounds: renderBounds,
+            colorSpace: colorSpace
+        )
 
-        // Convert to linear 32-bit float
-        var floatPixels = [Float](repeating: 0.0, count: width * height * 4)
-        for i in 0..<(width * height * 4) {
-            floatPixels[i] = WorkingColorSpace.sRGB.toLinear(Float(byteBuffer[i]) / 255.0)
-        }
-
-        let region = MTLRegionMake2D(0, 0, width, height)
-        let bytesPerRow = width * 4 * MemoryLayout<Float>.size
-        floatPixels.withUnsafeBytes { ptr in
-            texture.replace(region: region, mipmapLevel: 0, withBytes: ptr.baseAddress!, bytesPerRow: bytesPerRow)
-        }
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
 
         return DecodedImage(texture: texture, metadata: metadata, width: width, height: height)
     }
