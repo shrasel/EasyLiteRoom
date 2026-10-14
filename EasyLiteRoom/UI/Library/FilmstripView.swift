@@ -9,7 +9,7 @@
 import SwiftUI
 import AppKit
 
-public struct FilmstripItem: Identifiable, Sendable, Equatable {
+public struct FilmstripItem: Identifiable, @unchecked Sendable, Equatable {
     public let id: UUID
     public let title: String
     public let image: NSImage?

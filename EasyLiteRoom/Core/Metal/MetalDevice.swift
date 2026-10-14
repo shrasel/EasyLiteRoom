@@ -126,7 +126,6 @@ public final class MetalDevice: @unchecked Sendable {
         // 1. Clear histogram buffer
         encoder.setComputePipelineState(clearPipeline)
         encoder.setBuffer(buffer, offset: 0, index: 0)
-        let clearThreads = MTLSize(width: 1024, height: 1, depth: 1)
         let clearGroupSize = MTLSize(width: min(256, clearPipeline.maxTotalThreadsPerThreadgroup), height: 1, depth: 1)
         let clearGroups = MTLSize(width: (1024 + clearGroupSize.width - 1) / clearGroupSize.width, height: 1, depth: 1)
         encoder.dispatchThreadgroups(clearGroups, threadsPerThreadgroup: clearGroupSize)
