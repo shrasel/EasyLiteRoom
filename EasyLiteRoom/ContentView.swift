@@ -22,6 +22,8 @@ struct ContentView: View {
     @State private var metadata: EXIFMetadata? = .sample
     @State private var filmstripItems: [FilmstripItem] = []
     @State private var selectedFilmstripId: UUID? = nil
+    @State private var showExportSheet: Bool = false
+    @State private var currentPhotoURL: URL? = nil
     @State private var isProcessing: Bool = false
 
     var body: some View {
@@ -156,11 +158,26 @@ struct ContentView: View {
                 }
 
                 Button {
+                    showExportSheet = true
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .keyboardShortcut("e", modifiers: .command)
+                .help("Export photo (⌘E)")
+
+                Button {
                     showSplitComparison.toggle()
                 } label: {
                     Label("Split View", systemImage: "square.split.2x1")
                 }
             }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            ExportSheetView(
+                inputTexture: inputTexture,
+                parameters: parameters,
+                isPresented: $showExportSheet
+            )
         }
         .task {
             setupInitialImage()
@@ -229,10 +246,18 @@ struct ContentView: View {
 
     private func loadPhoto(from url: URL) {
         do {
+            self.currentPhotoURL = url
             let decoded = try RAWDecoder.decode(url: url)
             self.inputTexture = decoded.texture
             self.outputTexture = MetalDevice.shared.makeTexture(width: decoded.width, height: decoded.height)
             self.metadata = decoded.metadata
+
+            // Automatically load XMP sidecar if present
+            if let sidecar = XMPCodec.loadSidecar(for: url) {
+                self.parameters = sidecar
+            } else {
+                self.parameters = .default
+            }
 
             if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
                 self.originalImage = orig
