@@ -215,7 +215,8 @@ public enum ImageExporter {
         }
 
         // Check if transform (rotation, flip, or resize) is needed
-        let hasRotation = abs(geometry.rotationAngle) > 0.01
+        let totalRotation = Double(geometry.orientationRotation) + Double(geometry.rotationAngle)
+        let hasRotation = abs(totalRotation) > 0.01
         let hasFlip = geometry.flipHorizontal || geometry.flipVertical
         let hasResize = targetWidth != current.width || targetHeight != current.height
 
@@ -248,7 +249,7 @@ public enum ImageExporter {
             context.scaleBy(x: 1.0, y: -1.0)
         }
         if hasRotation {
-            let radians = CGFloat(geometry.rotationAngle) * .pi / 180.0
+            let radians = CGFloat(totalRotation) * .pi / 180.0
             context.rotate(by: -radians)
         }
 

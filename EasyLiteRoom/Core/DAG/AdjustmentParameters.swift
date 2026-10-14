@@ -127,6 +127,9 @@ public struct GeometryParameters: Sendable, Equatable, Codable {
     // Straighten / Rotation in degrees (-45.0 to +45.0)
     public var rotationAngle: Float = 0.0
 
+    // Discrete 90° orientation steps (0, 90, 180, 270)
+    public var orientationRotation: Int = 0
+
     // Aspect ratio preset
     public var aspectRatio: CropAspectRatio = .original
 
@@ -142,10 +145,18 @@ public struct GeometryParameters: Sendable, Equatable, Codable {
     public var scalePercent: Float = 100.0 // 10% to 200%
 
     public var isCropped: Bool {
-        return cropX > 0.001 || cropY > 0.001 || cropWidth < 0.999 || cropHeight < 0.999 || abs(rotationAngle) > 0.01 || flipHorizontal || flipVertical
+        return cropX > 0.001 || cropY > 0.001 || cropWidth < 0.999 || cropHeight < 0.999 || abs(rotationAngle) > 0.01 || orientationRotation != 0 || flipHorizontal || flipVertical
     }
 
     public init() {}
+
+    public mutating func rotateLeft90() {
+        orientationRotation = (orientationRotation + 270) % 360
+    }
+
+    public mutating func rotateRight90() {
+        orientationRotation = (orientationRotation + 90) % 360
+    }
 
     public mutating func resetCrop() {
         cropX = 0.0
@@ -153,6 +164,7 @@ public struct GeometryParameters: Sendable, Equatable, Codable {
         cropWidth = 1.0
         cropHeight = 1.0
         rotationAngle = 0.0
+        orientationRotation = 0
         aspectRatio = .original
         flipHorizontal = false
         flipVertical = false
@@ -202,8 +214,15 @@ public struct GeometryParameters: Sendable, Equatable, Codable {
     public func computedOutputDimensions(sourceWidth: Int, sourceHeight: Int) -> (width: Int, height: Int) {
         guard sourceWidth > 0, sourceHeight > 0 else { return (1920, 1080) }
 
-        let croppedW = max(1.0, Double(sourceWidth) * Double(cropWidth))
-        let croppedH = max(1.0, Double(sourceHeight) * Double(cropHeight))
+        var baseW = sourceWidth
+        var baseH = sourceHeight
+        if orientationRotation == 90 || orientationRotation == 270 {
+            baseW = sourceHeight
+            baseH = sourceWidth
+        }
+
+        let croppedW = max(1.0, Double(baseW) * Double(cropWidth))
+        let croppedH = max(1.0, Double(baseH) * Double(cropHeight))
 
         if !resizeEnabled {
             let scale = Double(scalePercent) / 100.0

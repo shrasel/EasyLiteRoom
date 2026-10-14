@@ -3,7 +3,7 @@
 //  EasyLiteRoom
 //
 //  Created by Shahjahan Rasel on 10/13/26.
-//  Main application workspace combining 120Hz canvas, develop inspector, live histogram, RAW engine, and Filmstrip.
+//  Main application workspace combining Adobe Lightroom Classic layout: Top module switcher, Navigator, Catalog, 120Hz canvas with bottom toolbar, Filmstrip, and Dual-mode Right Inspector (Histogram + Develop / Quick Develop & Metadata).
 //
 
 import SwiftUI
@@ -25,9 +25,15 @@ struct ContentView: View {
     @State private var showExportSheet: Bool = false
     @State private var currentPhotoURL: URL? = nil
     @State private var isProcessing: Bool = false
-    @State private var workspaceMode: Int = 0 // 0 = Develop, 1 = Library, 2 = Export
+    @State private var workspaceMode: Int = 1 // 0 = Develop, 1 = Library, 2 = Export (Default to Library matching Lightroom Classic)
     @State private var isCropActive: Bool = false
     @State private var selectedSidebarItem: SidebarItem? = .allPhotos
+
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var panOffset: CGSize = .zero
+    @State private var isGridView: Bool = false
+    @State private var isLeftPanelExpanded: Bool = true
+    @State private var isRightPanelExpanded: Bool = true
 
     private var filteredCatalogItems: [FilmstripItem] {
         guard let selection = selectedSidebarItem else { return filmstripItems }
@@ -45,6 +51,22 @@ struct ContentView: View {
         }
     }
 
+    private var selectedFilmstripItem: FilmstripItem? {
+        filmstripItems.first(where: { $0.id == selectedFilmstripId })
+    }
+
+    private var currentRating: Int {
+        selectedFilmstripItem?.rating ?? 0
+    }
+
+    private var currentIsFavorite: Bool {
+        selectedFilmstripItem?.isFavorite ?? false
+    }
+
+    private var currentTitle: String {
+        currentPhotoURL?.lastPathComponent ?? (selectedFilmstripItem?.title ?? "Untitled")
+    }
+
     private var recentItemsCount: Int {
         let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
         return filmstripItems.filter { $0.dateAdded >= cutoff }.count
@@ -55,135 +77,183 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            // Sidebar: Library / Collections
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Library")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 6)
+        VStack(spacing: 0) {
+            // MARK: - Lightroom Classic Top Header
+            lightroomHeaderBar
 
-                List(selection: $selectedSidebarItem) {
-                    Section("Catalog") {
-                        SidebarRow(
-                            title: "All Photos",
-                            systemImage: "photo.stack",
-                            count: filmstripItems.count,
-                            isSelected: selectedSidebarItem == .allPhotos
-                        ) {
-                            handleSidebarSelection(.allPhotos)
-                        }
-                        .tag(SidebarItem.allPhotos)
+            Divider()
 
-                        SidebarRow(
-                            title: "Recently Added",
-                            systemImage: "clock",
-                            count: recentItemsCount,
-                            isSelected: selectedSidebarItem == .recentlyAdded
-                        ) {
-                            handleSidebarSelection(.recentlyAdded)
-                        }
-                        .tag(SidebarItem.recentlyAdded)
+            // MARK: - 3-Column Professional Photography Layout
+            HStack(spacing: 0) {
 
-                        SidebarRow(
-                            title: "Favorites",
-                            systemImage: "heart.fill",
-                            iconColor: .red,
-                            count: favoriteItemsCount,
-                            isSelected: selectedSidebarItem == .favorites
-                        ) {
-                            handleSidebarSelection(.favorites)
+                // 1. LEFT PANEL: Navigator + Catalog + Import/Export Actions
+                if isLeftPanelExpanded {
+                    VStack(spacing: 0) {
+                        // Navigator mini-map with zoom modes (FIT | 100% | 200%)
+                        NavigatorView(
+                            image: renderedImage ?? originalImage,
+                            zoomScale: $zoomScale,
+                            panOffset: $panOffset
+                        )
+
+                        Divider()
+
+                        // Catalog section
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.secondary)
+                                Text("Catalog")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(nsColor: .windowBackgroundColor))
+
+                            Divider()
+
+                            List(selection: $selectedSidebarItem) {
+                                SidebarRow(
+                                    title: "All Photographs",
+                                    systemImage: "photo.stack",
+                                    count: filmstripItems.count,
+                                    isSelected: selectedSidebarItem == .allPhotos
+                                ) {
+                                    handleSidebarSelection(.allPhotos)
+                                }
+                                .tag(SidebarItem.allPhotos)
+
+                                SidebarRow(
+                                    title: "Recently Added",
+                                    systemImage: "clock",
+                                    count: recentItemsCount,
+                                    isSelected: selectedSidebarItem == .recentlyAdded
+                                ) {
+                                    handleSidebarSelection(.recentlyAdded)
+                                }
+                                .tag(SidebarItem.recentlyAdded)
+
+                                SidebarRow(
+                                    title: "Favorites",
+                                    systemImage: "heart.fill",
+                                    iconColor: .red,
+                                    count: favoriteItemsCount,
+                                    isSelected: selectedSidebarItem == .favorites
+                                ) {
+                                    handleSidebarSelection(.favorites)
+                                }
+                                .tag(SidebarItem.favorites)
+
+                                SidebarRow(
+                                    title: "Color Calibration Chart",
+                                    systemImage: "checkerboard.rectangle",
+                                    iconColor: .blue,
+                                    isSelected: selectedSidebarItem == .colorChecker
+                                ) {
+                                    handleSidebarSelection(.colorChecker)
+                                }
+                                .tag(SidebarItem.colorChecker)
+                            }
+                            .listStyle(.sidebar)
                         }
-                        .tag(SidebarItem.favorites)
+
+                        Divider()
+
+                        // Bottom Actions: Import... & Export... (Side by Side matching Lightroom Classic)
+                        HStack(spacing: 8) {
+                            Button {
+                                openImageFile()
+                            } label: {
+                                Text("Import...")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+
+                            Button {
+                                showExportSheet = true
+                            } label: {
+                                Text("Export...")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                        }
+                        .padding(10)
+                        .background(Color(nsColor: .windowBackgroundColor))
                     }
+                    .frame(width: 230)
 
-                    Section("Calibration") {
-                        SidebarRow(
-                            title: "ColorChecker Chart",
-                            systemImage: "checkerboard.rectangle",
-                            iconColor: .blue,
-                            isSelected: selectedSidebarItem == .colorChecker
-                        ) {
-                            handleSidebarSelection(.colorChecker)
-                        }
-                        .tag(SidebarItem.colorChecker)
-                    }
+                    Divider()
                 }
-                .listStyle(.sidebar)
 
-                Divider()
-
-                // File Open Button
-                Button {
-                    openImageFile()
-                } label: {
-                    Label("Import RAW / Photo", systemImage: "square.and.arrow.down")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .padding(14)
-            }
-            .frame(minWidth: 200, idealWidth: 220)
-        } detail: {
-            if workspaceMode == 1 {
-                // Workspace: Full Catalog Library Grid
-                LibraryGridView(
-                    items: filteredCatalogItems,
-                    selectedId: $selectedFilmstripId,
-                    collectionTitle: selectedSidebarItem?.title ?? "All Photos",
-                    onOpenPhoto: { item in
-                        selectedFilmstripId = item.id
-                        if item.title.contains("Color Calibration") || item.title.contains("ColorChecker") {
-                            loadColorCheckerChart()
-                        } else if let url = item.url {
-                            loadPhoto(from: url)
-                        }
-                        workspaceMode = 0
-                    },
-                    onImport: {
-                        openImageFile()
-                    },
-                    onToggleFavorite: { item in
-                        toggleFavorite(for: item.id)
-                    },
-                    onSetRating: { item, rating in
-                        setRating(for: item.id, rating: rating)
-                    }
-                )
-            } else {
-                // Workspace: Develop Room
+                // 2. CENTER WORKSPACE: Canvas (Loupe / Grid) + Bottom Toolbar + Filmstrip
                 VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        // Central Develop Canvas
+                    if isGridView {
+                        // Grid Catalog View
+                        LibraryGridView(
+                            items: filteredCatalogItems,
+                            selectedId: $selectedFilmstripId,
+                            collectionTitle: selectedSidebarItem?.title ?? "All Photographs",
+                            onOpenPhoto: { item in
+                                selectedFilmstripId = item.id
+                                if item.title.contains("Color Calibration") || item.title.contains("ColorChecker") {
+                                    loadColorCheckerChart()
+                                } else if let url = item.url {
+                                    loadPhoto(from: url)
+                                }
+                                isGridView = false
+                            },
+                            onImport: {
+                                openImageFile()
+                            },
+                            onToggleFavorite: { item in
+                                toggleFavorite(for: item.id)
+                            },
+                            onSetRating: { item, rating in
+                                setRating(for: item.id, rating: rating)
+                            }
+                        )
+                    } else {
+                        // Loupe Single Photo View with Lightroom Canvas Bottom Toolbar
                         DevelopCanvasView(
                             image: renderedImage,
                             originalImage: originalImage,
                             metadata: metadata,
                             showSplitComparison: $showSplitComparison,
                             isCropActive: $isCropActive,
-                            parameters: $parameters
-                        )
-
-                        Divider()
-
-                        // Trailing Develop Inspector
-                        DevelopInspectorView(
                             parameters: $parameters,
-                            isCropActive: $isCropActive,
-                            histogramData: histogramData,
-                            imageSize: renderedImage?.size,
-                            onReset: {
-                                parameters = .default
-                                isCropActive = false
-                                updatePipeline()
+                            zoomScale: $zoomScale,
+                            panOffset: $panOffset,
+                            rating: currentRating,
+                            isFavorite: currentIsFavorite,
+                            currentTitle: currentTitle,
+                            totalPhotos: filteredCatalogItems.count,
+                            isGridView: isGridView,
+                            onToggleGridView: {
+                                isGridView.toggle()
+                            },
+                            onSetRating: { rating in
+                                if let id = selectedFilmstripId {
+                                    setRating(for: id, rating: rating)
+                                }
+                            },
+                            onToggleFavorite: {
+                                if let id = selectedFilmstripId {
+                                    toggleFavorite(for: id)
+                                }
                             }
                         )
                     }
 
-                    // Horizontal Bottom Filmstrip
+                    Divider()
+
+                    // Bottom Filmstrip
                     FilmstripView(
                         items: filteredCatalogItems,
                         selectedId: $selectedFilmstripId,
@@ -203,20 +273,118 @@ struct ContentView: View {
                         }
                     )
                 }
+
+                // 3. RIGHT PANEL: Dual-mode Inspector (Develop adjustments OR Library Quick Develop/Metadata)
+                if isRightPanelExpanded {
+                    Divider()
+
+                    VStack(spacing: 0) {
+                        if workspaceMode == 0 {
+                            // DEVELOP MODE: Full Develop Inspector (Includes Histogram at top)
+                            DevelopInspectorView(
+                                parameters: $parameters,
+                                isCropActive: $isCropActive,
+                                histogramData: histogramData,
+                                imageSize: renderedImage?.size,
+                                onReset: {
+                                    parameters = .default
+                                    isCropActive = false
+                                    updatePipeline()
+                                }
+                            )
+                        } else {
+                            // LIBRARY MODE: Permanent Top Histogram + Quick Develop + Metadata Panel
+                            VStack(spacing: 0) {
+                                // Live GPU Histogram Component pinned at top
+                                HistogramView(data: histogramData)
+                                    .padding(.horizontal, 12)
+                                    .padding(.top, 10)
+                                    .padding(.bottom, 6)
+
+                                Divider()
+
+                                LibraryInspectorView(
+                                    parameters: $parameters,
+                                    metadata: metadata,
+                                    currentURL: currentPhotoURL,
+                                    selectedItem: selectedFilmstripItem,
+                                    onSetRating: { rating in
+                                        if let id = selectedFilmstripId {
+                                            setRating(for: id, rating: rating)
+                                        }
+                                    },
+                                    onToggleFavorite: {
+                                        if let id = selectedFilmstripId {
+                                            toggleFavorite(for: id)
+                                        }
+                                    },
+                                    onExport: {
+                                        showExportSheet = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    .frame(width: 290)
+                }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Workspace", selection: $workspaceMode) {
-                    Label("Library", systemImage: "square.grid.2x2").tag(1)
-                    Label("Develop", systemImage: "slider.horizontal.3").tag(0)
-                    Label("Export", systemImage: "square.and.arrow.up").tag(2)
+        .sheet(isPresented: $showExportSheet) {
+            ExportSheetView(
+                inputTexture: inputTexture,
+                parameters: parameters,
+                isPresented: $showExportSheet
+            )
+        }
+        .task {
+            setupInitialImage()
+        }
+        .onChange(of: parameters) { _, _ in
+            updatePipeline()
+        }
+    }
+
+    // MARK: - Lightroom Classic Top Header Bar
+    private var lightroomHeaderBar: some View {
+        HStack(spacing: 16) {
+            // Left: Logo & Identity
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color(red: 0.12, green: 0.14, blue: 0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .strokeBorder(Color.blue.opacity(0.6), lineWidth: 1)
+                        )
+                    Text("Lr")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundStyle(Color(red: 0.25, green: 0.70, blue: 1.0))
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 260)
+                .frame(width: 22, height: 22)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("EasyLiteRoom")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text(workspaceMode == 1 ? "Catalog - Library" : "Catalog - Develop")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
             }
 
-            ToolbarItemGroup(placement: .primaryAction) {
+            Spacer()
+
+            // Center: Lightroom Module Switcher Tabs (Library | Develop | Export)
+            HStack(spacing: 24) {
+                moduleTab(title: "Library", mode: 1)
+                moduleTab(title: "Develop", mode: 0)
+                moduleTab(title: "Export", mode: 2)
+            }
+
+            Spacer()
+
+            // Right: Presets & Split View Tools
+            HStack(spacing: 10) {
                 Menu {
                     Button("Default Neutral") {
                         parameters = .default
@@ -262,45 +430,78 @@ struct ContentView: View {
                     }
                 } label: {
                     Label("Presets", systemImage: "wand.and.stars")
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .help("Color grading presets")
+                .menuStyle(.borderlessButton)
+                .controlSize(.small)
 
                 Button {
                     showSplitComparison.toggle()
                 } label: {
-                    Label("Split View", systemImage: showSplitComparison ? "square.split.2x1.fill" : "square.split.2x1")
+                    Image(systemName: showSplitComparison ? "square.split.2x1.fill" : "square.split.2x1")
+                        .font(.system(size: 12))
                 }
-                .tint(showSplitComparison ? .accentColor : .primary)
-                .help("Toggle Before/After comparison view")
+                .buttonStyle(.plain)
+                .foregroundStyle(showSplitComparison ? Color.accentColor : Color.secondary)
+                .help("Toggle Split Before/After (Y)")
+
+                Divider().frame(height: 14)
+
+                // Panel Collapse Toggles
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isLeftPanelExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isLeftPanelExpanded ? "sidebar.left" : "sidebar.left")
+                        .font(.system(size: 11))
+                        .foregroundStyle(isLeftPanelExpanded ? Color.accentColor : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Toggle Left Panel")
 
                 Button {
-                    showExportSheet = true
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isRightPanelExpanded.toggle()
+                    }
                 } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
+                    Image(systemName: isRightPanelExpanded ? "sidebar.right" : "sidebar.right")
+                        .font(.system(size: 11))
+                        .foregroundStyle(isRightPanelExpanded ? Color.accentColor : Color.secondary)
                 }
-                .keyboardShortcut("e", modifiers: .command)
-                .help("Export photo (⌘E)")
+                .buttonStyle(.plain)
+                .help("Toggle Right Panel")
             }
         }
-        .onChange(of: workspaceMode) { _, newMode in
-            if newMode == 2 {
-                showExportSheet = true
-                workspaceMode = 0
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private func moduleTab(title: String, mode: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if mode == 2 {
+                    showExportSheet = true
+                } else {
+                    workspaceMode = mode
+                    if mode == 0 {
+                        isGridView = false
+                    }
+                }
+            }
+        } label: {
+            VStack(spacing: 3) {
+                Text(title)
+                    .font(.system(size: 13, weight: workspaceMode == mode ? .bold : .medium))
+                    .foregroundStyle(workspaceMode == mode ? Color.white : Color.secondary)
+
+                Rectangle()
+                    .fill(workspaceMode == mode ? Color.white : Color.clear)
+                    .frame(height: 2)
             }
         }
-        .sheet(isPresented: $showExportSheet) {
-            ExportSheetView(
-                inputTexture: inputTexture,
-                parameters: parameters,
-                isPresented: $showExportSheet
-            )
-        }
-        .task {
-            setupInitialImage()
-        }
-        .onChange(of: parameters) { _, _ in
-            updatePipeline()
-        }
+        .buttonStyle(.plain)
     }
 
     private func setupInitialImage() {
@@ -332,15 +533,10 @@ struct ContentView: View {
     private func handleSidebarSelection(_ item: SidebarItem) {
         selectedSidebarItem = item
         switch item {
-        case .allPhotos:
-            workspaceMode = 1
-        case .recentlyAdded:
-            workspaceMode = 1
-        case .favorites:
-            workspaceMode = 1
+        case .allPhotos, .recentlyAdded, .favorites:
+            break
         case .colorChecker:
             loadColorCheckerChart()
-            workspaceMode = 0
         }
     }
 
@@ -439,7 +635,6 @@ struct ContentView: View {
             for url in panel.urls {
                 loadPhoto(from: url)
             }
-            workspaceMode = 0
         }
     }
 
@@ -482,6 +677,10 @@ struct ContentView: View {
                 self.selectedFilmstripId = newItem.id
             }
 
+            // Reset zoom to fit for new photo
+            zoomScale = 1.0
+            panOffset = .zero
+
             updatePipeline()
         } catch {
             print("Failed to decode image from \(url.lastPathComponent): \(error.localizedDescription)")
@@ -499,10 +698,10 @@ public enum SidebarItem: String, Hashable, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
-        case .allPhotos: return "All Photos"
+        case .allPhotos: return "All Photographs"
         case .recentlyAdded: return "Recently Added"
         case .favorites: return "Favorites"
-        case .colorChecker: return "ColorChecker Chart"
+        case .colorChecker: return "Color Calibration Chart"
         }
     }
 }
@@ -523,7 +722,7 @@ fileprivate struct SidebarRow: View {
                     .frame(width: 18)
 
                 Text(title)
-                    .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
                     .foregroundStyle(.primary)
 
                 Spacer()
