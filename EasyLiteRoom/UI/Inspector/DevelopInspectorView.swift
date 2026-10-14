@@ -151,6 +151,36 @@ public struct DevelopInspectorView: View {
                     }
                     .padding(.top, 4)
                 }
+
+                // HSL Color Grading Section
+                GroupBox(label: sectionHeader(title: "Color Grading (HSL)", icon: "swatchpalette.fill")) {
+                    HSLColorGradingView(hsl: $parameters.hsl)
+                        .padding(.top, 4)
+                }
+
+                // Detail Section
+                GroupBox(label: sectionHeader(title: "Detail & Optics", icon: "sparkles")) {
+                    VStack(spacing: 8) {
+                        PrecisionSlider(
+                            title: "Sharpening",
+                            value: $parameters.detail.sharpening,
+                            range: 0...100,
+                            defaultValue: 0,
+                            step: 1,
+                            valueFormatter: { String(format: "%.0f", $0) }
+                        )
+
+                        PrecisionSlider(
+                            title: "Noise Reduction",
+                            value: $parameters.detail.noiseReduction,
+                            range: 0...100,
+                            defaultValue: 0,
+                            step: 1,
+                            valueFormatter: { String(format: "%.0f", $0) }
+                        )
+                    }
+                    .padding(.top, 4)
+                }
             }
             .padding(14)
         }

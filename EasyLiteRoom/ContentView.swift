@@ -3,7 +3,7 @@
 //  EasyLiteRoom
 //
 //  Created by Shahjahan Rasel on 10/13/26.
-//  Main application workspace combining 120Hz canvas, develop inspector, live histogram, and RAW engine.
+//  Main application workspace combining 120Hz canvas, develop inspector, live histogram, RAW engine, and Filmstrip.
 //
 
 import SwiftUI
@@ -20,12 +20,13 @@ struct ContentView: View {
     @State private var outputTexture: MTLTexture?
     @State private var histogramData: HistogramData = .empty
     @State private var metadata: EXIFMetadata? = .sample
-    @State private var splineLUT: [Float] = []
+    @State private var filmstripItems: [FilmstripItem] = []
+    @State private var selectedFilmstripId: UUID? = nil
     @State private var isProcessing: Bool = false
 
     var body: some View {
         NavigationSplitView {
-            // Sidebar: Library / Collections placeholder
+            // Sidebar: Library / Collections
             VStack(alignment: .leading, spacing: 14) {
                 Text("Library")
                     .font(.system(size: 13, weight: .bold))
@@ -36,7 +37,7 @@ struct ContentView: View {
                 List {
                     Section("Catalog") {
                         Label("All Photos", systemImage: "photo.stack")
-                            .badge(1)
+                            .badge(max(1, filmstripItems.count))
                         Label("Recently Added", systemImage: "clock")
                         Label("Favorites", systemImage: "heart")
                     }
@@ -62,24 +63,35 @@ struct ContentView: View {
             }
             .frame(minWidth: 200, idealWidth: 220)
         } detail: {
-            HStack(spacing: 0) {
-                // Central Develop Canvas
-                DevelopCanvasView(
-                    image: renderedImage,
-                    originalImage: originalImage,
-                    metadata: metadata,
-                    showSplitComparison: $showSplitComparison
-                )
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    // Central Develop Canvas
+                    DevelopCanvasView(
+                        image: renderedImage,
+                        originalImage: originalImage,
+                        metadata: metadata,
+                        showSplitComparison: $showSplitComparison
+                    )
 
-                Divider()
+                    Divider()
 
-                // Trailing Develop Inspector
-                DevelopInspectorView(
-                    parameters: $parameters,
-                    histogramData: histogramData,
-                    onReset: {
-                        parameters = .default
-                        updatePipeline()
+                    // Trailing Develop Inspector
+                    DevelopInspectorView(
+                        parameters: $parameters,
+                        histogramData: histogramData,
+                        onReset: {
+                            parameters = .default
+                            updatePipeline()
+                        }
+                    )
+                }
+
+                // Horizontal Bottom Filmstrip
+                FilmstripView(
+                    items: filmstripItems,
+                    selectedId: $selectedFilmstripId,
+                    onSelect: { item in
+                        // Future multi-asset session switching
                     }
                 )
             }
@@ -107,6 +119,8 @@ struct ContentView: View {
                         parameters.tint = 8
                         parameters.exposure = 0.45
                         parameters.vibrance = 15
+                        parameters.hsl.orange.saturation = 20
+                        parameters.hsl.yellow.luminance = 15
                         updatePipeline()
                     }
                     Button("Cool Nordic Cinema (-Temp, +Contrast)") {
@@ -114,13 +128,17 @@ struct ContentView: View {
                         parameters.tint = -6
                         parameters.contrast = 25
                         parameters.saturation = -10
+                        parameters.hsl.blue.saturation = 15
+                        parameters.hsl.blue.hue = -5
                         updatePipeline()
                     }
-                    Button("High Key Portrait (+Highlights, -Contrast)") {
-                        parameters.exposure = 0.65
-                        parameters.highlights = -20
-                        parameters.shadows = 25
-                        parameters.vibrance = 12
+                    Button("Punchy Landscape (Rich Greens & Aquas)") {
+                        parameters.contrast = 15
+                        parameters.vibrance = 20
+                        parameters.hsl.green.saturation = 30
+                        parameters.hsl.green.luminance = -10
+                        parameters.hsl.blue.saturation = 25
+                        parameters.detail.sharpening = 40
                         updatePipeline()
                     }
                     Divider()
@@ -162,6 +180,9 @@ struct ContentView: View {
         // Generate baseline unadjusted NSImage
         if let orig = TextureGenerator.makeNSImage(from: tex) {
             self.originalImage = orig
+            let initialItem = FilmstripItem(title: "Color Calibration Chart", image: orig, isRAW: true, rating: 5)
+            self.filmstripItems = [initialItem]
+            self.selectedFilmstripId = initialItem.id
         }
 
         updatePipeline()
@@ -215,6 +236,9 @@ struct ContentView: View {
 
             if let orig = TextureGenerator.makeNSImage(from: decoded.texture) {
                 self.originalImage = orig
+                let newItem = FilmstripItem(title: url.lastPathComponent, image: orig, isRAW: true, rating: 0)
+                self.filmstripItems.append(newItem)
+                self.selectedFilmstripId = newItem.id
             }
 
             updatePipeline()
