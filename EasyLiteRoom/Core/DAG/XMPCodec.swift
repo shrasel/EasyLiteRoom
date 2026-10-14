@@ -33,6 +33,12 @@ public enum XMPCodec {
             crs:Saturation="\(parameters.saturation)"
             crs:Sharpening="\(parameters.detail.sharpening)"
             crs:LuminanceSmoothing="\(parameters.detail.noiseReduction)"
+            crs:HasCrop="\(parameters.geometry.isCropped ? "True" : "False")"
+            crs:CropTop="\(parameters.geometry.cropY)"
+            crs:CropLeft="\(parameters.geometry.cropX)"
+            crs:CropBottom="\(parameters.geometry.cropY + parameters.geometry.cropHeight)"
+            crs:CropRight="\(parameters.geometry.cropX + parameters.geometry.cropWidth)"
+            crs:CropAngle="\(parameters.geometry.rotationAngle)"
             crs:ToneCurveKnots="\(knotsString)">
            <crs:HueAdjustments>
             <rdf:Seq>
@@ -112,6 +118,26 @@ public enum XMPCodec {
         if let sat = extractFloat(attr: "crs:Saturation") { params.saturation = sat }
         if let sharp = extractFloat(attr: "crs:Sharpening") { params.detail.sharpening = sharp }
         if let nr = extractFloat(attr: "crs:LuminanceSmoothing") { params.detail.noiseReduction = nr }
+
+        // Parse Crop & Geometry Settings
+        if let hasCrop = extractString(attr: "crs:HasCrop"), hasCrop.lowercased() == "true" {
+            let top = extractFloat(attr: "crs:CropTop") ?? 0.0
+            let left = extractFloat(attr: "crs:CropLeft") ?? 0.0
+            let bottom = extractFloat(attr: "crs:CropBottom") ?? 1.0
+            let right = extractFloat(attr: "crs:CropRight") ?? 1.0
+            let angle = extractFloat(attr: "crs:CropAngle") ?? 0.0
+
+            let clampedX = max(0.0, min(1.0, left))
+            let clampedY = max(0.0, min(1.0, top))
+            let width = max(0.01, min(1.0 - clampedX, right - left))
+            let height = max(0.01, min(1.0 - clampedY, bottom - top))
+
+            params.geometry.cropX = clampedX
+            params.geometry.cropY = clampedY
+            params.geometry.cropWidth = width
+            params.geometry.cropHeight = height
+            params.geometry.rotationAngle = angle
+        }
 
         // Parse Tone Curve Knots
         if let knotsRaw = extractString(attr: "crs:ToneCurveKnots") {

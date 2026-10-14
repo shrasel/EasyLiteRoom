@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var currentPhotoURL: URL? = nil
     @State private var isProcessing: Bool = false
     @State private var workspaceMode: Int = 0 // 0 = Develop, 1 = Library, 2 = Export
+    @State private var isCropActive: Bool = false
 
     var body: some View {
         NavigationSplitView {
@@ -91,7 +92,9 @@ struct ContentView: View {
                             image: renderedImage,
                             originalImage: originalImage,
                             metadata: metadata,
-                            showSplitComparison: $showSplitComparison
+                            showSplitComparison: $showSplitComparison,
+                            isCropActive: $isCropActive,
+                            parameters: $parameters
                         )
 
                         Divider()
@@ -99,9 +102,12 @@ struct ContentView: View {
                         // Trailing Develop Inspector
                         DevelopInspectorView(
                             parameters: $parameters,
+                            isCropActive: $isCropActive,
                             histogramData: histogramData,
+                            imageSize: renderedImage?.size,
                             onReset: {
                                 parameters = .default
+                                isCropActive = false
                                 updatePipeline()
                             }
                         )

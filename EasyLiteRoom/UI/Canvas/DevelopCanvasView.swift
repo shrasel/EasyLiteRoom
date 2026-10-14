@@ -3,7 +3,7 @@
 //  EasyLiteRoom
 //
 //  Created by Shahjahan Rasel on 10/13/26.
-//  Interactive 120Hz Develop canvas with pan/zoom and Before/After split view.
+//  Interactive 120Hz Develop canvas with pan/zoom, Crop & Straighten overlay, and Before/After split view.
 //
 
 import SwiftUI
@@ -14,6 +14,9 @@ public struct DevelopCanvasView: View {
     let originalImage: NSImage?
     let metadata: EXIFMetadata?
     @Binding var showSplitComparison: Bool
+    @Binding var isCropActive: Bool
+    @Binding var parameters: AdjustmentParameters
+
     @State private var splitPosition: CGFloat = 0.5
     @State private var zoomScale: CGFloat = 1.0
     @State private var panOffset: CGSize = .zero
@@ -24,12 +27,16 @@ public struct DevelopCanvasView: View {
         image: NSImage?,
         originalImage: NSImage?,
         metadata: EXIFMetadata? = nil,
-        showSplitComparison: Binding<Bool>
+        showSplitComparison: Binding<Bool>,
+        isCropActive: Binding<Bool>,
+        parameters: Binding<AdjustmentParameters>
     ) {
         self.image = image
         self.originalImage = originalImage
         self.metadata = metadata
         self._showSplitComparison = showSplitComparison
+        self._isCropActive = isCropActive
+        self._parameters = parameters
     }
 
     private var effectiveZoom: CGFloat {
@@ -45,13 +52,24 @@ public struct DevelopCanvasView: View {
 
                 if let currentImage = image {
                     ZStack {
-                        if showSplitComparison, let orig = originalImage {
-                            // Underneath: Original Image (Before)
+                        if isCropActive {
+                            // CROP EDITING MODE: Full photo shown uncropped with interactive 8-handle CropOverlayView
+                            Image(nsImage: currentImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .overlay(
+                                    CropOverlayView(
+                                        geometry: $parameters.geometry,
+                                        imageWidth: currentImage.size.width,
+                                        imageHeight: currentImage.size.height
+                                    )
+                                )
+                        } else if showSplitComparison, let orig = originalImage {
+                            // SPLIT COMPARISON MODE: Underneath Before, On top After
                             Image(nsImage: orig)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
 
-                            // On Top: Edited Image (After) clipped to split line
                             Image(nsImage: currentImage)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
@@ -86,8 +104,33 @@ public struct DevelopCanvasView: View {
                                             }
                                     )
                             }
+                        } else if parameters.geometry.isCropped {
+                            // CROPPED PRESENTATION MODE: Photo framed by non-destructive crop box & orientation
+                            let croppedAspect = (CGFloat(parameters.geometry.cropWidth) * currentImage.size.width) /
+                                                max(1.0, CGFloat(parameters.geometry.cropHeight) * currentImage.size.height)
+
+                            GeometryReader { cropBox in
+                                let viewW = cropBox.size.width
+                                let viewH = cropBox.size.height
+                                let fullW = viewW / max(0.01, CGFloat(parameters.geometry.cropWidth))
+                                let fullH = viewH / max(0.01, CGFloat(parameters.geometry.cropHeight))
+                                let offX = -CGFloat(parameters.geometry.cropX) * fullW
+                                let offY = -CGFloat(parameters.geometry.cropY) * fullH
+
+                                Image(nsImage: currentImage)
+                                    .resizable()
+                                    .frame(width: fullW, height: fullH)
+                                    .offset(x: offX, y: offY)
+                                    .rotationEffect(.degrees(Double(parameters.geometry.rotationAngle)))
+                                    .scaleEffect(
+                                        x: parameters.geometry.flipHorizontal ? -1 : 1,
+                                        y: parameters.geometry.flipVertical ? -1 : 1
+                                    )
+                            }
+                            .aspectRatio(croppedAspect, contentMode: .fit)
+                            .clipped()
                         } else {
-                            // Standard Single Image View
+                            // STANDARD FULL-FRAME IMAGE VIEW
                             Image(nsImage: currentImage)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
@@ -98,23 +141,32 @@ public struct DevelopCanvasView: View {
                     .gesture(
                         MagnificationGesture()
                             .updating($gestureZoom) { value, state, _ in
-                                state = value
+                                if !isCropActive {
+                                    state = value
+                                }
                             }
                             .onEnded { value in
-                                zoomScale = max(0.2, min(8.0, zoomScale * value))
+                                if !isCropActive {
+                                    zoomScale = max(0.2, min(8.0, zoomScale * value))
+                                }
                             }
                     )
                     .simultaneousGesture(
                         DragGesture()
                             .updating($gesturePan) { value, state, _ in
-                                state = value.translation
+                                if !isCropActive && zoomScale > 1.05 {
+                                    state = value.translation
+                                }
                             }
                             .onEnded { value in
-                                panOffset.width += value.translation.width
-                                panOffset.height += value.translation.height
+                                if !isCropActive && zoomScale > 1.05 {
+                                    panOffset.width += value.translation.width
+                                    panOffset.height += value.translation.height
+                                }
                             }
                     )
                     .onTapGesture(count: 2) {
+                        guard !isCropActive else { return }
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                             if zoomScale > 1.2 {
                                 zoomScale = 1.0
@@ -138,22 +190,91 @@ public struct DevelopCanvasView: View {
                 // Top Toolbar Overlay
                 VStack {
                     HStack {
-                        // View mode indicators
+                        // View mode controls
                         HStack(spacing: 8) {
+                            // Crop Tool Button
                             Button {
-                                showSplitComparison.toggle()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    isCropActive.toggle()
+                                    if isCropActive {
+                                        // Reset zoom to 1.0 so user can see full crop context
+                                        zoomScale = 1.0
+                                        panOffset = .zero
+                                        showSplitComparison = false
+                                    }
+                                }
                             } label: {
-                                Label(showSplitComparison ? "Before / After Active" : "Compare",
-                                      systemImage: showSplitComparison ? "square.split.2x1.fill" : "square.split.2x1")
+                                Label(isCropActive ? "Done Crop" : "Crop",
+                                      systemImage: isCropActive ? "checkmark.circle.fill" : "crop")
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(showSplitComparison ? .accentColor : .secondary.opacity(0.2))
+                            .tint(isCropActive ? .accentColor : .secondary.opacity(0.2))
                             .controlSize(.small)
+                            .keyboardShortcut("c", modifiers: [])
+                            .help("Toggle Crop & Straighten tool (C)")
 
-                            if showSplitComparison {
-                                Text("Before (Left) | After (Right)")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(.secondary)
+                            if isCropActive {
+                                // Aspect Ratio Preset in Crop Mode
+                                Picker("", selection: Binding(
+                                    get: { parameters.geometry.aspectRatio },
+                                    set: { newPreset in
+                                        if let img = image {
+                                            parameters.geometry.setAspectRatio(
+                                                newPreset,
+                                                imageWidth: img.size.width,
+                                                imageHeight: img.size.height
+                                            )
+                                        } else {
+                                            parameters.geometry.aspectRatio = newPreset
+                                        }
+                                    }
+                                )) {
+                                    ForEach(CropAspectRatio.allCases) { preset in
+                                        Text(preset.rawValue).tag(preset)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .controlSize(.small)
+                                .frame(width: 140)
+
+                                if abs(parameters.geometry.rotationAngle) > 0.01 {
+                                    Text(String(format: "%+.1f°", parameters.geometry.rotationAngle))
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Button {
+                                    withAnimation {
+                                        parameters.geometry.resetCrop()
+                                    }
+                                } label: {
+                                    Image(systemName: "arrow.uturn.backward")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .help("Reset crop to full bounds")
+                            } else {
+                                // Compare Button
+                                Button {
+                                    showSplitComparison.toggle()
+                                } label: {
+                                    Label(showSplitComparison ? "Split Active" : "Compare",
+                                          systemImage: showSplitComparison ? "square.split.2x1.fill" : "square.split.2x1")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(showSplitComparison ? .accentColor : .primary)
+                                .controlSize(.small)
+                                .help("Toggle Before / After split comparison")
+
+                                if parameters.geometry.isCropped {
+                                    Text("Cropped")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.accentColor.opacity(0.2))
+                                        .foregroundStyle(Color.accentColor)
+                                        .clipShape(Capsule())
+                                }
                             }
                         }
 
@@ -208,6 +329,17 @@ public struct DevelopCanvasView: View {
                             Text(meta.summary)
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                                 .foregroundStyle(.primary)
+                            Text("•")
+                                .foregroundStyle(.secondary)
+                        }
+                        if parameters.geometry.resizeEnabled {
+                            let dims = parameters.geometry.computedOutputDimensions(
+                                sourceWidth: Int(image?.size.width ?? 1920),
+                                sourceHeight: Int(image?.size.height ?? 1080)
+                            )
+                            Text("Resize: \(dims.width) × \(dims.height) px")
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.accentColor)
                             Text("•")
                                 .foregroundStyle(.secondary)
                         }

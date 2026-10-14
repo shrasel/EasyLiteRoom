@@ -85,10 +85,12 @@ public struct ExportSheetView: View {
 
             // Image Dimensions Info
             if let tex = inputTexture {
+                let dims = parameters.geometry.computedOutputDimensions(sourceWidth: tex.width, sourceHeight: tex.height)
+                let mp = Double(dims.width * dims.height) / 1_000_000.0
                 HStack {
                     Text("Resolution:")
                         .foregroundStyle(.secondary)
-                    Text("\(tex.width) × \(tex.height) px (Full Sensor Resolution)")
+                    Text("\(dims.width) × \(dims.height) px • \(String(format: "%.1f", mp)) MP\(parameters.geometry.isCropped ? " • Cropped" : "")\(parameters.geometry.resizeEnabled ? " • Resized" : "")")
                         .fontWeight(.medium)
                     Spacer()
                 }

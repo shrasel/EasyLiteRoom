@@ -74,10 +74,158 @@ public struct AdjustmentParameters: Sendable, Equatable, Codable {
     // Detail & Sharpening
     public var detail = DetailParameters()
 
+    // Geometry, Crop & Resize
+    public var geometry = GeometryParameters()
+
     public init() {}
 
     /// Returns default neutral settings.
     public static let `default` = AdjustmentParameters()
+}
+
+/// Standard photographic crop aspect ratio presets.
+public enum CropAspectRatio: String, CaseIterable, Identifiable, Sendable, Codable {
+    case original = "Original"
+    case freeform = "Freeform"
+    case square1x1 = "1:1 (Square)"
+    case ratio4x5 = "4:5 (8x10)"
+    case ratio5x7 = "5:7"
+    case ratio2x3 = "2:3 (4x6)"
+    case ratio16x9 = "16:9 (Widescreen)"
+
+    public var id: String { rawValue }
+
+    public func ratio(originalWidth: CGFloat, originalHeight: CGFloat) -> CGFloat? {
+        switch self {
+        case .original:
+            guard originalHeight > 0 else { return 1.0 }
+            return originalWidth / originalHeight
+        case .freeform:
+            return nil
+        case .square1x1:
+            return 1.0
+        case .ratio4x5:
+            return 4.0 / 5.0
+        case .ratio5x7:
+            return 5.0 / 7.0
+        case .ratio2x3:
+            return 2.0 / 3.0
+        case .ratio16x9:
+            return 16.0 / 9.0
+        }
+    }
+}
+
+/// Non-destructive crop, orientation, and output resize parameters.
+public struct GeometryParameters: Sendable, Equatable, Codable {
+    // Normalized crop box: (x: 0...1, y: 0...1, width: 0...1, height: 0...1)
+    public var cropX: Float = 0.0
+    public var cropY: Float = 0.0
+    public var cropWidth: Float = 1.0
+    public var cropHeight: Float = 1.0
+
+    // Straighten / Rotation in degrees (-45.0 to +45.0)
+    public var rotationAngle: Float = 0.0
+
+    // Aspect ratio preset
+    public var aspectRatio: CropAspectRatio = .original
+
+    // Orientation flipping
+    public var flipHorizontal: Bool = false
+    public var flipVertical: Bool = false
+
+    // Output Resizing Options
+    public var resizeEnabled: Bool = false
+    public var targetWidth: Int = 1920
+    public var targetHeight: Int = 1080
+    public var maintainAspectRatio: Bool = true
+    public var scalePercent: Float = 100.0 // 10% to 200%
+
+    public var isCropped: Bool {
+        return cropX > 0.001 || cropY > 0.001 || cropWidth < 0.999 || cropHeight < 0.999 || abs(rotationAngle) > 0.01 || flipHorizontal || flipVertical
+    }
+
+    public init() {}
+
+    public mutating func resetCrop() {
+        cropX = 0.0
+        cropY = 0.0
+        cropWidth = 1.0
+        cropHeight = 1.0
+        rotationAngle = 0.0
+        aspectRatio = .original
+        flipHorizontal = false
+        flipVertical = false
+    }
+
+    public mutating func resetResize() {
+        resizeEnabled = false
+        scalePercent = 100.0
+        maintainAspectRatio = true
+    }
+
+    /// Dynamically applies an aspect ratio preset centered around the current crop box.
+    public mutating func setAspectRatio(_ preset: CropAspectRatio, imageWidth: CGFloat, imageHeight: CGFloat) {
+        self.aspectRatio = preset
+        guard let targetRatio = preset.ratio(originalWidth: imageWidth, originalHeight: imageHeight) else {
+            return
+        }
+
+        let imageAspect = imageWidth / max(1.0, imageHeight)
+        let normalizedTargetRatio = targetRatio / imageAspect
+
+        let centerX = cropX + cropWidth / 2.0
+        let centerY = cropY + cropHeight / 2.0
+
+        var newW = cropWidth
+        var newH = newW / Float(normalizedTargetRatio)
+
+        if newH > 1.0 {
+            newH = 1.0
+            newW = newH * Float(normalizedTargetRatio)
+        }
+        if newW > 1.0 {
+            newW = 1.0
+            newH = newW / Float(normalizedTargetRatio)
+        }
+
+        let newX = max(0.0, min(1.0 - newW, centerX - newW / 2.0))
+        let newY = max(0.0, min(1.0 - newH, centerY - newH / 2.0))
+
+        self.cropX = newX
+        self.cropY = newY
+        self.cropWidth = newW
+        self.cropHeight = newH
+    }
+
+    /// Computes the exact final output pixel dimensions considering crop rect and resize settings.
+    public func computedOutputDimensions(sourceWidth: Int, sourceHeight: Int) -> (width: Int, height: Int) {
+        guard sourceWidth > 0, sourceHeight > 0 else { return (1920, 1080) }
+
+        let croppedW = max(1.0, Double(sourceWidth) * Double(cropWidth))
+        let croppedH = max(1.0, Double(sourceHeight) * Double(cropHeight))
+
+        if !resizeEnabled {
+            let scale = Double(scalePercent) / 100.0
+            return (max(1, Int(round(croppedW * scale))), max(1, Int(round(croppedH * scale))))
+        }
+
+        if maintainAspectRatio {
+            let aspect = croppedW / croppedH
+            if targetWidth > 0 && targetHeight > 0 {
+                let scaleW = Double(targetWidth) / croppedW
+                let scaleH = Double(targetHeight) / croppedH
+                let finalScale = min(scaleW, scaleH)
+                return (max(1, Int(round(croppedW * finalScale))), max(1, Int(round(croppedH * finalScale))))
+            } else if targetWidth > 0 {
+                return (targetWidth, max(1, Int(round(Double(targetWidth) / aspect))))
+            } else {
+                return (max(1, Int(round(Double(targetHeight) * aspect))), targetHeight)
+            }
+        } else {
+            return (max(1, targetWidth), max(1, targetHeight))
+        }
+    }
 }
 
 /// GPU-side uniform buffer layout matching Metal 3 MSL specifications (16-byte aligned).

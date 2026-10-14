@@ -143,7 +143,15 @@ public enum ImageExporter {
             cgImage = img
         }
 
-        // 4. Save using CGImageDestination
+        // 4. Apply non-destructive crop, orientation, and resize transformations
+        let finalImage = applyGeometryTransform(
+            sourceImage: cgImage,
+            geometry: parameters.geometry,
+            configuration: configuration,
+            colorSpace: cgColorSpace
+        )
+
+        // 5. Save using CGImageDestination
         guard let destination = CGImageDestinationCreateWithURL(
             destinationURL as CFURL,
             configuration.format.utType.identifier as CFString,
@@ -158,10 +166,96 @@ public enum ImageExporter {
             properties[kCGImageDestinationLossyCompressionQuality] = configuration.jpegQuality / 100.0
         }
 
-        CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
+        CGImageDestinationAddImage(destination, finalImage, properties as CFDictionary)
         if !CGImageDestinationFinalize(destination) {
             throw ExportError.writeFailed
         }
+    }
+
+    /// Transforms a CGImage by applying non-destructive normalized crop, orientation, and output resize.
+    private static func applyGeometryTransform(
+        sourceImage: CGImage,
+        geometry: GeometryParameters,
+        configuration: ExportConfiguration,
+        colorSpace: CGColorSpace
+    ) -> CGImage {
+        var current = sourceImage
+
+        // 1. Crop to pixel rectangle
+        if geometry.cropX > 0.001 || geometry.cropY > 0.001 || geometry.cropWidth < 0.999 || geometry.cropHeight < 0.999 {
+            let srcW = CGFloat(sourceImage.width)
+            let srcH = CGFloat(sourceImage.height)
+
+            let cropRect = CGRect(
+                x: round(CGFloat(geometry.cropX) * srcW),
+                y: round(CGFloat(geometry.cropY) * srcH),
+                width: max(1.0, round(CGFloat(geometry.cropWidth) * srcW)),
+                height: max(1.0, round(CGFloat(geometry.cropHeight) * srcH))
+            )
+
+            if let cropped = sourceImage.cropping(to: cropRect) {
+                current = cropped
+            }
+        }
+
+        // 2. Compute final target dimensions
+        var (targetWidth, targetHeight) = geometry.computedOutputDimensions(
+            sourceWidth: current.width,
+            sourceHeight: current.height
+        )
+
+        // If maxDimension is set in ExportConfiguration, fit within it
+        if let maxDim = configuration.maxDimension, maxDim > 0 {
+            let maxCurrent = max(targetWidth, targetHeight)
+            if maxCurrent > maxDim {
+                let scale = Double(maxDim) / Double(maxCurrent)
+                targetWidth = max(1, Int(round(Double(targetWidth) * scale)))
+                targetHeight = max(1, Int(round(Double(targetHeight) * scale)))
+            }
+        }
+
+        // Check if transform (rotation, flip, or resize) is needed
+        let hasRotation = abs(geometry.rotationAngle) > 0.01
+        let hasFlip = geometry.flipHorizontal || geometry.flipVertical
+        let hasResize = targetWidth != current.width || targetHeight != current.height
+
+        if !hasRotation && !hasFlip && !hasResize {
+            return current
+        }
+
+        // 3. Render into high-quality CGBitmapContext with interpolation
+        guard let context = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: current.bitsPerComponent,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: current.bitmapInfo.rawValue
+        ) else {
+            return current
+        }
+
+        context.interpolationQuality = .high
+
+        // Set up affine transform from center
+        context.translateBy(x: CGFloat(targetWidth) / 2.0, y: CGFloat(targetHeight) / 2.0)
+
+        if geometry.flipHorizontal {
+            context.scaleBy(x: -1.0, y: 1.0)
+        }
+        if geometry.flipVertical {
+            context.scaleBy(x: 1.0, y: -1.0)
+        }
+        if hasRotation {
+            let radians = CGFloat(geometry.rotationAngle) * .pi / 180.0
+            context.rotate(by: -radians)
+        }
+
+        context.translateBy(x: -CGFloat(targetWidth) / 2.0, y: -CGFloat(targetHeight) / 2.0)
+        context.draw(current, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
+
+        return context.makeImage() ?? current
     }
 }
 
