@@ -16,6 +16,16 @@ struct EasyLiteRoomApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .frame(minWidth: 1000, minHeight: 650)
+        }
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
+        .commands {
+            SidebarCommands()
+            CommandGroup(after: .appInfo) {
+                Divider()
+                Button("Check for Updates...") {}
+            }
         }
     }
 }
